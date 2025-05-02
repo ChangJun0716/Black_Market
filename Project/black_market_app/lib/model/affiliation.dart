@@ -1,6 +1,8 @@
 class Affiliation {
   final String aJobGradeCode; // 직급 코드
-  Affiliation({required this.aJobGradeCode});
+  final String aUserid;
+  Affiliation({required this.aJobGradeCode, required this.aUserid});
   Affiliation.fromMap(Map<String, dynamic> res)
-    : aJobGradeCode = res['aJobGradeCode'];
+    : aJobGradeCode = res['aJobGradeCode'],
+      aUserid = res['aUserid'];
 }
