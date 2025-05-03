@@ -1,3 +1,4 @@
+import 'package:black_market_app/model/users.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -59,4 +60,66 @@ class DatabaseHandler {
       version: 1,
     );
   }
+
+  // --------------- Users -------------------- //
+  // login.dart : User login id & pw check (query)
+  Future<int> loginUsers(String id, String pw) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select count(*) from users where userid = ? and password = ?",
+      [id, pw],
+    );
+    int count = Sqflite.firstIntValue(queryResult) ?? 0;
+    return count;
+  }
+
+  // ------------------------------------------------ //
+  // login.dart : Check login success users memberType (query)
+  Future<int> userMemberType(String id) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select memberType from users where userid = ?",
+      [id],
+    );
+    int count = Sqflite.firstIntValue(queryResult) ?? 0;
+    return count;
+  }
+
+  // ------------------------------------------------ //
+  // create_account.dart : id double check (query)
+  Future<int> idDoubleCheck(String id) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select count(*) from users where userid = ?",
+      [id],
+    );
+    int count = Sqflite.firstIntValue(queryResult) ?? 0;
+    return count;
+  }
+
+  // ------------------------------------------------ //
+  // create_account.dart : create account (insert)
+  Future<int> insertUserInfo(Users account) async {
+    int result = 0;
+    final Database db = await initializeDB();
+    result = await db.rawInsert(
+      "insert into users(user) values (userid, password, name, birthDate, gender, phone, memberType) values (?,?,?,?,?,?,?)",
+      [
+        account.userid,
+        account.password,
+        account.name,
+        account.birthDate,
+        account.gender,
+        account.phone,
+        account.memberType,
+      ],
+    );
+    return result;
+  }
+
+  // ------------------------------------------------ //
+  // ------------------------------------------------ //
+  // ------------------------------------------------ //
+  // ------------------------------------------------ //
+  // ------------------------------------------------ //
 }// class

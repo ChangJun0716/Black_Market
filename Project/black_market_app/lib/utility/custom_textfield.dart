@@ -5,6 +5,7 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscureText;
   final TextInputType keyboardType;
+  final bool readOnly;
 
   const CustomTextField({
     super.key,
@@ -12,6 +13,7 @@ class CustomTextField extends StatelessWidget {
     required this.controller,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.readOnly = false,
   });
 
   @override
@@ -24,6 +26,7 @@ class CustomTextField extends StatelessWidget {
         labelText: label,
         border: const OutlineInputBorder(),
       ),
+      readOnly: readOnly,
     );
   }
 }
