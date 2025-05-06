@@ -94,6 +94,7 @@ class _CreateAccountState extends State<CreateAccount> {
   // 중복확인 버튼 action
   idDoubleCheck(String id) async {
     int count = await handler.idDoubleCheck(id);
+    print('object');
     if (count == 0) {
       CustomDialogue().showDialogue(
         title: '확인 완료',
