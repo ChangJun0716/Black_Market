@@ -2,6 +2,7 @@ import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textbutton.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
+import 'package:black_market_app/view/customer/product/customer_product_list.dart';
 import 'package:black_market_app/view/login/create_account.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +77,7 @@ class _LoginState extends State<Login> {
       int memberType = await handler.userMemberType(id); // 회원 아이디로 분류코드 식별
       if (memberType == 1) {
         saveStorage(memberType);
-        // 사용자 페이지
+        Get.to(CustomerProductList());
       } else if (memberType == 2) {
         saveStorage(memberType);
         // 본사 페이지

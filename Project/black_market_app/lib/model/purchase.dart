@@ -1,6 +1,6 @@
 class Purchase {
   final String purchaseId; //주문번호
-  final DateTime purchaseDate; // 구매일
+  final String purchaseDate; // 구매일
   final int purchaseQuanity; // 수량
   final int purchaseCardId; // 장바구니 //
   final String pStoreCode; //대리점코드

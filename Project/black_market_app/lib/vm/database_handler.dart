@@ -1,5 +1,9 @@
+
 import 'package:black_market_app/model/return_investigation.dart';
 import 'package:black_market_app/model/stock_receipts.dart';
+import 'package:black_market_app/model/products.dart';
+import 'package:black_market_app/model/purchase.dart';
+
 import 'package:black_market_app/model/users.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -62,7 +66,11 @@ class DatabaseHandler {
         
         // Table: products (match with Products model)
         await db.execute(
+
           "CREATE TABLE products(productsCode TEXT PRIMARY KEY, productsColor TEXT, productsName TEXT, productsPrice INTEGER, productsSize INTEGER)",
+
+          "create table products(productsCode text primary key, productsColor text, productsName text, productsPrice integer, productsSize integer, productsImage blob)",
+
         );
         
         // Table: purchase (match with Purchase model)
@@ -138,7 +146,11 @@ class DatabaseHandler {
     int result = 0;
     final Database db = await initializeDB();
     result = await db.rawInsert(
+
       "INSERT INTO users (userid, password, name, birthDate, gender, phone, memberType) VALUES (?, ?, ?, ?, ?, ?, ?)",
+
+      "insert into users(userid, password, name, birthDate, gender, phone, memberType) values (?,?,?,?,?,?,?)",
+
       [
         account.userid,
         account.password,
@@ -151,6 +163,7 @@ class DatabaseHandler {
     );
     return result;
   }
+
 
    // 제조사 목록 로딩
   Future<List<String>> getManufacturers() async {
@@ -585,9 +598,47 @@ Future<void> updateReturnStatus({
 
 
 
+
+  // ------------------Product----------------------- //
+  // customer_product_list.dart : product list (query)
+  Future<List<Products>> queryGroupedProducts() async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery('''
+    SELECT * FROM products 
+    WHERE productsCode IN (
+      SELECT MIN(productsCode)
+      FROM products
+      GROUP BY productsName
+    )
+    ORDER BY productsName
+  ''');
+
+    return queryResult.map((e) => Products.formMap(e)).toList();
+  }
+
   // ------------------------------------------------ //
-  // ------------------------------------------------ //
-  // ------------------------------------------------ //
+  // customer_product_detial.dart : selected product information (query)
+  Future<List<Products>> querySelectedProducts(String name) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery('''
+    SELECT * FROM products 
+    WHERE productsName = ?
+  ''',
+  [name]
+  );
+
+    return queryResult.map((e) => Products.formMap(e)).toList();
+  }
+  // --------------------Purchase---------------------- //
+  Future<int> addShopingCart(Purchase purchase)async{
+    int result = 0;
+    final Database db = await initializeDB();
+    result = await db.rawInsert(
+      "insert into purchase(pStoreCode,  oproductCode, purchaseQuantity, purchaseDate, purchasePrice, purchaseDeliverystatus, purchaseCartId) values (?,?,?,?,?,?)",
+      [purchase.pStoreCode ,purchase.oproductCode, purchase.purchaseQuanity, purchase.purchaseDate, purchase.purchasePrice, purchase.purchaseDeliveryStatus, purchase.purchaseCardId]
+    );
+    return result;
+  }
   // ------------------------------------------------ //
   // ------------------------------------------------ //
 }// class
