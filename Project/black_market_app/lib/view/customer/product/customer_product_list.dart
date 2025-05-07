@@ -6,6 +6,7 @@ import 'package:black_market_app/view/customer/purchase/customer_shopping_cart_l
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 class CustomerProductList extends StatefulWidget {
   const CustomerProductList({super.key});
@@ -16,6 +17,21 @@ class CustomerProductList extends StatefulWidget {
 
 class _CustomerProductListState extends State<CustomerProductList> {
   late DatabaseHandler handler;
+  final box = GetStorage();
+  late String uid;
+  late int memberType;
+  @override
+  void initState() {
+    super.initState();
+    handler = DatabaseHandler();
+    initStorage();
+  }
+  initStorage(){
+    uid = box.read('uid');
+    memberType = box.read('memberType');
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,48 +41,59 @@ class _CustomerProductListState extends State<CustomerProductList> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: () => Get.to(CustomerShoppingCartList()), 
+            onPressed: () => Get.to(CustomerShoppingCartList()),
             icon: Icon(Icons.shopping_cart),
           ),
-          Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                UserAccountsDrawerHeader(
-                  accountName: Text(''), 
-                  accountEmail: Text('')
-                ),
-                ListTile(
-                  leading: Icon(Icons.money),
-                  title: Text('결재 내역'),
-                  onTap: () => Get.to(CustomerPurchaseList()),
-                ),
-                ListTile(
-                  leading: Icon(Icons.money),
-                  title: Text('공지사항'),
-                  onTap: () => Get.to(CustomerAnnouncement()),
-                ),
-              ],
-            ),
-          )
         ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(uid),
+              accountEmail: Text(''),
+              decoration: BoxDecoration(color: Colors.black),
+            ),
+            ListTile(
+              leading: Icon(Icons.money),
+              title: Text('결재 내역'),
+              onTap: () => Get.to(CustomerPurchaseList()),
+            ),
+            ListTile(
+              leading: Icon(Icons.money),
+              title: Text('공지사항'),
+              onTap: () => Get.to(CustomerAnnouncement()),
+            ),
+          ],
+        ),
       ),
       body: FutureBuilder(
         future: handler.queryGroupedProducts(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             return ListView.builder(
-              itemCount: snapshot.data!.length,
+              itemCount: snapshot.data?.length,
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    Get.to(CustomerProductDetail(), arguments: snapshot.data![index].productsName);
+                    Get.to(
+                      CustomerProductDetail(),
+                      arguments: snapshot.data![index].productsName,
+                    );
                   },
                   child: Card(
                     child: Row(
                       children: [
-                        Image.memory(snapshot.data![index].productsImage),
-                        Text(snapshot.data![index].productsName),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Image.memory(snapshot.data![index].productsImage,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover),
+                        ),
+                        Text('제품명 : ${snapshot.data![index].productsName}',),
+                        
                       ],
                     ),
                   ),

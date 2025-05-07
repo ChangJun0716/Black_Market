@@ -1,14 +1,14 @@
 
+import 'package:black_market_app/model/create_notice.dart';
 import 'package:black_market_app/model/return_investigation.dart';
+import 'package:black_market_app/model/shopping_cart_from_purchase.dart';
 import 'package:black_market_app/model/stock_receipts.dart';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/purchase.dart';
-
 import 'package:black_market_app/model/users.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
-
 import '../model/create_approval_document.dart';
 import '../model/dispatch.dart';
 import '../model/store.dart';
@@ -66,16 +66,12 @@ class DatabaseHandler {
         
         // Table: products (match with Products model)
         await db.execute(
-
-          "CREATE TABLE products(productsCode TEXT PRIMARY KEY, productsColor TEXT, productsName TEXT, productsPrice INTEGER, productsSize INTEGER)",
-
-          "create table products(productsCode text primary key, productsColor text, productsName text, productsPrice integer, productsSize integer, productsImage blob)",
-
+          "CREATE TABLE products(productsCode TEXT PRIMARY KEY, productsColor TEXT, productsName TEXT, productsPrice INTEGER, productsSize INTEGER, productsImage blob)",
         );
         
         // Table: purchase (match with Purchase model)
         await db.execute(
-          "CREATE TABLE purchase(purchaseId TEXT PRIMARY KEY, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode TEXT, purchasePrice INTEGER)",
+          "CREATE TABLE purchase(purchaseId integer PRIMARY KEY autoincrement, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode TEXT, purchasePrice INTEGER, pUserId Text)",
         );
         
         // Table: returnInvestigation (match with ReturnInvestigation model)
@@ -148,9 +144,6 @@ class DatabaseHandler {
     result = await db.rawInsert(
 
       "INSERT INTO users (userid, password, name, birthDate, gender, phone, memberType) VALUES (?, ?, ?, ?, ?, ?, ?)",
-
-      "insert into users(userid, password, name, birthDate, gender, phone, memberType) values (?,?,?,?,?,?,?)",
-
       [
         account.userid,
         account.password,
@@ -612,23 +605,31 @@ Future<void> updateReturnStatus({
     )
     ORDER BY productsName
   ''');
-
     return queryResult.map((e) => Products.formMap(e)).toList();
   }
-
   // ------------------------------------------------ //
-  // customer_product_detial.dart : selected product information (query)
-  Future<List<Products>> querySelectedProducts(String name) async {
-    final Database db = await initializeDB();
-    final List<Map<String, Object?>> queryResult = await db.rawQuery('''
-    SELECT * FROM products 
-    WHERE productsName = ?
-  ''',
-  [name]
-  );
+Future<List<Map<String, dynamic>>> queryProductDetails(String productName) async {
+  final Database db = await initializeDB();
 
-    return queryResult.map((e) => Products.formMap(e)).toList();
-  }
+  final result = await db.rawQuery('''
+    SELECT 
+      p.productsCode,
+      p.productsColor,
+      p.productsName,
+      p.productsPrice,
+      p.productsSize,
+      p.productsImage,
+      r.introductionPhoto,
+      r.productDescription
+    FROM products p
+    LEFT JOIN productRegistration r
+    ON p.productsCode = r.pProductCode
+    WHERE p.productsName = ?
+  ''', [productName]);
+
+  return result;
+}
+
   // --------------------Purchase---------------------- //
   Future<int> addShopingCart(Purchase purchase)async{
     int result = 0;
@@ -640,5 +641,32 @@ Future<void> updateReturnStatus({
     return result;
   }
   // ------------------------------------------------ //
+// query : announcement (notice)
+  Future<List<CreateNotice>> queryAnnouncment()async{
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select * from createNotice "
+    );
+    return queryResult.map((e) => CreateNotice.fromMap(e)).toList();
+  }
+  // ------------------------------------------------ //
+// query shopping Cart
+  Future<List<shoppingCart>> queryShoppingCart(String pUserId)async{
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "SELECT pr.productsName, pr.productsImage, p.purchaseQuantity FROM purchase p INNER JOIN products pr ON p.oproductCode = pr.productsCode WHERE p.pUserId = ? and pr.purchaseDeliveryStatus = '장바구니'",
+      [pUserId]
+    );
+    return queryResult.map((e) => shoppingCart.fromMap(e)).toList();
+  }
+  // ------------------------------------------------ //
+// query store
+  Future<List<Store>> queryStore()async{
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select * from store"
+    );
+    return queryResult.map((e) => Store.fromMap(e)).toList();
+  }
   // ------------------------------------------------ //
 }// class

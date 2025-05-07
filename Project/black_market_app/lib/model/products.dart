@@ -6,10 +6,9 @@ class Products {
   final String productsColor; //제품 컬러
   final String productsName; // 제품명
   final int productsPrice;
-
   /// 가격
   final int productsSize; // 사이즈
-  final Uint8List productsImage; // 사진
+  final Uint8List  productsImage; // 사진
   Products({
     required this.productsCode,
     required this.productsColor,

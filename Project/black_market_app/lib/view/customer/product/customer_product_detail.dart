@@ -1,5 +1,4 @@
 // 제품 상세
-import 'package:black_market_app/message/custom_dialogue.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/model/purchase.dart';
 import 'package:black_market_app/utility/custom_button.dart';
@@ -38,7 +37,6 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
     quantityCon = TextEditingController();
     now = DateTime.now();
     selectedStore = 0;
-    
   }
 
   // ------- functions ------- //
@@ -51,119 +49,141 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('제품 상세')),
-      body: FutureBuilder(
-        future: handler.querySelectedProducts(productsName),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: handler.queryProductDetails(productsName),
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            final products = snapshot.data!;
-            final representative = products.first; // 대표 데이터
-            final colors =
-                products.map((p) => p.productsColor).toSet().toList();
-            final sizes = products.map((p) => p.productsSize).toSet().toList();
-            selectedColor ??= colors.first;
-            selectedSize ??= sizes.first;
-
-            return Center(
-              child: Column(
-                children: [
-                  // image : product
-                  Image.memory(representative.productsImage),
-                  // name : product
-                  Text(representative.productsName),
-                  // price : product
-                  Text("가격 : ${representative.productsPrice} 원"),
-                  Row(
-                    children: [
-                      // dropdown button : color
-                      DropdownButton<String>(
-                        value: selectedColor,
-                        items:
-                            colors
-                                .map(
-                                  (e) => DropdownMenuItem(
-                                    value: e,
-                                    child: Text(e),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          selectedColor = value;
-                          setState(() {});
-                        },
-                      ),
-                      // dropdown button : size
-                      DropdownButton<int>(
-                        value: selectedSize,
-                        items:
-                            sizes
-                                .map(
-                                  (e) => DropdownMenuItem(
-                                    value: e,
-                                    child: Text(e.toString()),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          selectedSize = value;
-                          setState(() {});
-                        },
-                      ),
-                    ],
-                  ),
-                  // textfield : 수량 작성
-                  CustomTextField(label: '수량을 입력 하세요', controller: quantityCon),
-                  // button : 대리점 선택 페이지로 이동
-                  CustomButton(
-                    text: '픽업 대리점 선택',
-                    onPressed: () => Get.to(CustomerSelectStore()),
-                  ),
-                  CustomButton(text: '장바구니 담기', onPressed: () {
-                    if (
-                      selectedStore == 0 ||
-                      quantityCon.text.trim().isEmpty
-                    ) {
-                      CustomSnackbar().showSnackbar(title: '오류', message: '선택하지 않은 항목이 있습니다.', backgroundColor: Colors.red, textColor: Colors.white);
-                    }else {
-                      addShopingCart(representative.productsPrice);
-                    }
-                  },)
-                ],
-              ),
-            );
-          } else {
+          if (!snapshot.hasData)
             return Center(child: CircularProgressIndicator());
-          }
+
+          final items = snapshot.data!;
+          final representative = items.first;
+
+          final colors =
+              items.map((e) => e['productsColor'] as String).toSet().toList();
+          final sizes =
+              items.map((e) => e['productsSize'] as int).toSet().toList();
+
+          selectedColor ??= colors.first;
+          selectedSize ??= sizes.first;
+
+          // 선택된 조합에 맞는 상세 데이터 찾기
+          final selected = items.firstWhere(
+            (e) =>
+                e['productsColor'] == selectedColor &&
+                e['productsSize'] == selectedSize,
+            orElse: () => representative,
+          );
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // 대표 이미지
+                if (selected['productsImage'] != null)
+                  Image.memory(selected['productsImage']),
+
+                Text(selected['productsName']),
+                Text("가격: ${selected['productsPrice']}원"),
+
+                // 드롭다운들
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    DropdownButton<String>(
+                      value: selectedColor,
+                      items:
+                          colors
+                              .map(
+                                (e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)),
+                              )
+                              .toList(),
+                      onChanged: (val) => setState(() => selectedColor = val),
+                    ),
+                    SizedBox(width: 10),
+                    DropdownButton<int>(
+                      value: selectedSize,
+                      items:
+                          sizes
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e.toString()),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (val) => setState(() => selectedSize = val),
+                    ),
+                  ],
+                ),
+
+                // 소개 이미지 및 설명
+                if (selected['introductionPhoto'] != null)
+                  Image.memory(selected['introductionPhoto']),
+                if (selected['productDescription'] != null)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(selected['productDescription']),
+                  ),
+
+
+
+                // 대리점 선택 버튼
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CustomButton(
+                      text: '픽업 대리점 선택',
+                      onPressed: () => Get.to(CustomerSelectStore())!.then((value) {
+                        selectedStore = value;
+                        setState(() {});
+                        }
+                      ),
+                    ),
+                // 수량 입력
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 200,
+                    height: 50,
+                    child: CustomTextField(
+                      label: '수량을 입력하세요',
+                      controller: quantityCon,
+                    ),
+                  ),
+                ),
+                  ],
+                ),
+
+                // 장바구니 버튼
+                CustomButton(
+                  text: '장바구니 담기',
+                  onPressed: () async {
+                    if (selectedStore == 0 || quantityCon.text.trim().isEmpty) {
+                      CustomSnackbar().showSnackbar(
+                        title: '오류',
+                        message: '선택하지 않은 항목이 있습니다.',
+                        backgroundColor: Colors.red,
+                        textColor: Colors.white,
+                      );
+                    } else {
+                      await handler.addShopingCart(Purchase(
+                        purchaseDate: now.toString(), 
+                        purchaseQuanity: int.parse(quantityCon.text), 
+                        pUserId: uid, 
+                        pStoreCode: selectedStore.toString(), 
+                        purchaseDeliveryStatus: '장바구니', 
+                        oproductCode: selected['oproductCode'], 
+                        purchasePrice: selected['purchasePrice']*int.parse(quantityCon.text)
+                        )
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          );
         },
       ),
     );
-  }// build
-  // ----- functions ----- //
-  addShopingCart(int price)async{
-    var insertPurchase  = Purchase(
-      purchaseId: purchaseId, // AI 하는건지
-      purchaseDate: now.toString(), 
-      purchaseQuanity: int.parse(quantityCon.text), 
-      purchaseCardId: purchaseCardId, // AI 하는건지
-      pStoreCode: selectedStore.toString(), 
-      purchaseDeliveryStatus: '장바구니', 
-      oproductCode: uid, 
-      purchasePrice: int.parse(quantityCon.text)*price
-    );
-    
-      CustomDialogue().showDialogue(
-        title: '장바구니 담기', 
-        middleText: '선택하신 제품을 장바구니에 담으시겠습니까?',
-        cancelText: '취소',
-        onCancel: () => Get.back(),
-        confirmText: '담기',
-        onConfirm: () async{
-          int result = await handler.addShopingCart(insertPurchase);
-          if (result == 0) {
-            CustomSnackbar().showSnackbar(title: '오류', message: '장바구니 등록에 실패 하였습니다.', backgroundColor: Colors.red, textColor: Colors.white);
-          }
-          Get.back();
-          Get.back();
-        },
-      );
   }
-}// class
+}
