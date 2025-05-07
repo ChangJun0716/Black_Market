@@ -16,8 +16,10 @@ class Users {
     required this.birthDate,
     required this.gender,
   });
+
+  // Map으로부터 객체 생성
   Users.fromMap(Map<String, dynamic> res)
-    : userid = res['id'],
+    : userid = res['userid'], // 'id'를 'userid'로 수정
       password = res['password'],
       name = res['name'],
       phone = res['phone'],
@@ -25,3 +27,4 @@ class Users {
       birthDate = res['birthDate'],
       gender = res['gender'];
 }
+
