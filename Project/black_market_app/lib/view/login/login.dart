@@ -35,6 +35,7 @@ class _LoginState extends State<Login> {
       backgroundColor: Colors.black,
       body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // textField : id
             CustomTextField(label: '아이디를 입력 하세요', controller: idCon),

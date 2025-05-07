@@ -5,7 +5,7 @@ class StockReceipts {
   final int stockReceiptsQuantityReceived; //입고수량 //
   final DateTime stockReceiptsReceipDate; // 입고날짜
   final String sproductCode; // 제품코드
-  final String smanufacturerName;
+  final String smanufacturerName; //제조사명
 
   /// 제조사명
 

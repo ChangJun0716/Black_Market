@@ -1,9 +1,9 @@
 //발주
-class Order {
+class Orders {
   final String orderQuantity; //발주수량
   final DateTime orderDate; // 발주날짜
   final String orderStatus; // 발주상태
-  final int orderPrice;
+  final int orderPrice; 
 
   /// 발주 가격
   final String oajobGradCode; // 소속pk
@@ -11,7 +11,7 @@ class Order {
   final String oproductCode; // 제품코드
   final String omamufacturer; //제조사 코드
 
-  Order({
+  Orders({
     required this.orderQuantity,
     required this.orderDate,
     required this.orderStatus,
@@ -21,10 +21,10 @@ class Order {
     required this.oproductCode,
     required this.omamufacturer,
   });
-  factory Order.formMap(Map<String, dynamic> res) {
-    return Order(
+  factory Orders.formMap(Map<String, dynamic> res) {
+    return Orders(
       orderQuantity: res['orderQuantity'],
-      orderDate: res['oderDate'],
+      orderDate: res['orderDate'],
       orderPrice: res['orderPrice'],
       orderStatus: res['orderStatus'],
       oajobGradCode: res['oajobGradCode'],

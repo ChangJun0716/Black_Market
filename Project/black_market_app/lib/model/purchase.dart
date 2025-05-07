@@ -4,7 +4,7 @@ class Purchase {
   final int purchaseQuanity; // 수량
   final int purchaseCardId; // 장바구니 //
   final String pStoreCode; //대리점코드
-  final String purchaseDeliveryStatus;
+  final String purchaseDeliveryStatus; //배송 상태
   final String oproductCode; //제품코드
   final int purchasePrice; // 구매가격
   //Constructor
