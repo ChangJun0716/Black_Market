@@ -163,8 +163,8 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
         // purchaseId는 이제 Map에서 int? 타입으로 가져옴
         final int? purchaseId = order.orderData['purchaseId'] as int?;
         if (purchaseId != null) {
-          await DatabaseHandler().updatePurchaseDeliveryStatus(
-            purchaseId.toString(), // 주문 번호 (int)
+          await DatabaseHandler().updatePurchaseDeliveryStatus1(
+            purchaseId, // 주문 번호 (int)
             order.currentStatus, // 변경된 새로운 상태 값
           );
           // 업데이트 성공 시 해당 항목의 originalStatus를 currentStatus로 업데이트

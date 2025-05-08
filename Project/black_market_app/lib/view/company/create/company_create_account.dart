@@ -63,22 +63,22 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
   void idDoubleCheck(String id) async {
     // 입력된 ID 유효성 검사 (비어 있는지 등)
     if (id.trim().isEmpty) {
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: '아이디를 입력해주세요.',
+      Get.snackbar(
+        '오류',
+        '아이디를 입력해주세요.',
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
       return; // 함수 종료
     }
 
     // 이미 중복 확인을 완료했으면 다시 확인하지 않음
     if (idCheck) {
-      CustomSnackbar().showSnackbar(
-        title: '확인 완료',
-        message: '이미 중복 확인된 아이디입니다.',
+      Get.snackbar(
+        '확인 완료',
+        '이미 중복 확인된 아이디입니다.',
         backgroundColor: Colors.orange,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
       return; // 함수 종료
     }
@@ -97,22 +97,21 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
             setState(() {
               idCheck = true; // ID 사용 가능 상태로 변경
             });
-            Get.back(); // Get.back() 사용
-            CustomSnackbar().showSnackbar(
-              title: '성공',
-              message: '사용 가능한 아이디입니다.',
+            Get.snackbar(
+              '성공',
+              '사용 가능한 아이디입니다.',
               backgroundColor: Colors.green,
-              textColor: Colors.white,
+              colorText: Colors.white,
             );
           },
         );
       } else {
         // 중복 있음
-        CustomSnackbar().showSnackbar(
-          title: '오류',
-          message: '이미 사용 중인 아이디입니다.',
+        Get.snackbar(
+          '오류',
+          '이미 사용 중인 아이디입니다.',
           backgroundColor: Colors.red,
-          textColor: Colors.white,
+          colorText: Colors.white,
         );
         setState(() {
           idCheck = false; // 중복 확인 상태 초기화
@@ -122,11 +121,11 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
     } catch (e) {
       // 데이터베이스 작업 중 예외 발생
       print('ID 중복 확인 중 오류 발생: $e');
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: 'ID 중복 확인 중 오류가 발생했습니다.',
+      Get.snackbar(
+        '오류',
+        'ID 중복 확인 중 오류가 발생했습니다.',
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
     }
   }
@@ -144,33 +143,33 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
         birthDate
             .isEmpty // 빈 문자열인지 확인
             ) {
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: '모든 필수 정보를 입력해주세요.',
+      Get.snackbar(
+        '오류',
+        '모든 필수 정보를 입력해주세요.',
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
       return; // 함수 종료
     }
 
     // ID 중복 확인이 완료되었는지 확인
     if (!idCheck) {
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: '아이디 중복 확인을 먼저 해주세요.',
+      Get.snackbar(
+        '오류',
+        '아이디 중복 확인을 먼저 해주세요.',
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
       return; // 함수 종료
     }
 
     // 등록할 대리점 정보가 있는지 확인
     if (_registeredStoreInfo == null) {
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: '소속 대리점을 등록 또는 선택 해주세요.',
+      Get.snackbar(
+        '오류',
+        '소속 대리점을 등록 또는 선택 해주세요.',
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
       return; // 함수 종료
     }
@@ -191,25 +190,31 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
     final String storeCode = _registeredStoreInfo!['storeCode']; // null 아님 보장
 
     try {
+      print('>>> 사용자 정보 삽입 시도: ${newUser.userid}'); // 로깅 추가
       // 1. users 테이블에 사용자 정보 삽입
       int userInsertResult = await handler.insertUserInfo(newUser); // 변수명 변경
+      print('>>> 사용자 정보 삽입 결과 (rowId): $userInsertResult'); // 로깅 추가
 
       if (userInsertResult > 0) {
+        // 사용자 정보 삽입 성공 (반환된 row ID가 0보다 크면 성공)
+        print('>>> 사용자 정보 삽입 성공. 소속 정보 삽입 시도.'); // 로깅 추가
         // 사용자 정보 삽입 성공 시 daffiliation 테이블에 소속 정보 삽입
         // 2. daffiliation 테이블에 대리점-사용자 소속 정보 삽입
         int daffiliationInsertResult = await handler.insertDaffiliation(
           storeCode, // CompanyCreateStore에서 받아온 대리점 코드
           newUser.userid, // 새로 생성된 사용자 ID
         );
+        print('>>> 소속 정보 삽입 결과 (rowId): $daffiliationInsertResult'); // 로깅 추가
 
         if (daffiliationInsertResult > 0) {
+          // 소속 정보 삽입 성공
+          print('>>> 사용자 및 소속 정보 모두 성공적으로 삽입됨.'); // 로깅 추가
           // 두 테이블 모두 삽입 성공
-          CustomSnackbar().showSnackbar(
-            title: '등록 성공',
-            message:
-                '${newUser.name} 사용자 계정 및 ${_registeredStoreInfo!['storeName']} 소속 등록이 완료되었습니다.', // 메시지 수정
+          Get.snackbar(
+            '등록 성공',
+            '${newUser.name} 사용자 계정 및 ${_registeredStoreInfo!['storeName']} 소속 등록이 완료되었습니다.', // 메시지 수정
             backgroundColor: Colors.green,
-            textColor: Colors.white,
+            colorText: Colors.white,
           );
           // 성공 시 입력 필드 초기화 및 상태 재설정
           idCon.clear();
@@ -225,34 +230,38 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
           // TODO: CustomButtonCalender 텍스트도 초기화하는 로직 추가 필요
 
           // 필요하다면 다음 단계 페이지로 이동하거나 그냥 둘 수 있습니다.
-          // Get.back(); // 이전 페이지로 돌아가지 않도록 주석 처리
+          // Get.back();
         } else {
-          // daffiliation 삽입 실패 (users 삽입은 성공했으나 소속 등록 실패)
+          // 소속 삽입 실패
+          print('>>> 사용자 정보는 삽입되었으나, 소속 정보 삽입 실패.'); // 로깅 추가
           // TODO: users 테이블에 삽입된 정보 롤백 고려 (복잡해질 수 있음)
-          CustomSnackbar().showSnackbar(
-            title: '등록 실패',
-            message: '사용자 계정 등록은 완료되었으나, 소속 대리점 등록에 실패했습니다.',
+          Get.snackbar(
+            '등록 실패',
+            '사용자 계정 등록은 완료되었으나, 소속 대리점 등록에 실패했습니다.',
             backgroundColor: Colors.red,
-            textColor: Colors.white,
+            colorText: Colors.white,
           );
         }
       } else {
+        // 사용자 삽입 실패 (insertUserInfo 결과 <= 0)
+        print('>>> 사용자 정보 삽입 실패 (insertUserInfo 결과 <= 0).'); // 로깅 추가
         // users 테이블 삽입 실패
-        CustomSnackbar().showSnackbar(
-          title: '등록 실패',
-          message: '사용자 계정 등록에 실패했습니다.',
+        Get.snackbar(
+          '등록 실패',
+          '사용자 계정 등록에 실패했습니다.',
           backgroundColor: Colors.red,
-          textColor: Colors.white,
+          colorText: Colors.white,
         );
       }
     } catch (e) {
+      // 데이터베이스 작업 중 예외 발생 (users 또는 daffiliation 삽입 시)
+      print('>>> 데이터베이스 작업 중 예외 발생: ${e.toString()}'); // 오류 메시지 포함 로깅 추가
       // 데이터베이스 작업 중 예외 발생
-      print('사용자/소속 등록 중 오류 발생: $e');
-      CustomSnackbar().showSnackbar(
-        title: '오류',
-        message: '사용자/소속 등록 중 오류가 발생했습니다: ${e.toString()}',
+      Get.snackbar(
+        '오류',
+        '등록 중 오류가 발생했습니다: ${e.toString()}', // 오류 메시지 포함
         backgroundColor: Colors.red,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
     }
   }
@@ -262,38 +271,43 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
     // CompanyCreateStore 페이지로 이동하고 결과를 기다림 (Get.to 사용)
     final result = await Get.to(() => CompanyCreateStore());
 
-    // result가 null이 아니고 Map 형태이면 상태 업데이트
-    if (result != null && result is Map<String, dynamic>) {
+    // result가 Map<String, dynamic> 형태인지 확인하고 업데이트
+    if (result != null &&
+        result is Map<String, dynamic> &&
+        result.containsKey('storeCode') &&
+        result.containsKey('storeName')) {
+      print('>>> CompanyCreateStore에서 유효한 결과 받음: $result'); // 로깅 추가
       setState(() {
         _registeredStoreInfo = result; // 받아온 대리점 정보 저장
-        // 대리점 정보가 선택/등록되면 ID 중복 확인 상태를 초기화하여
-        // 새 계정을 다시 등록할 수 있도록 합니다. (선택 사항)
-        // idCheck = false; // ID 중복 확인 상태는 유지하는 것이 좋을 수도 있습니다.
-        // idCon.clear(); // 아이디 필드는 유지
-        // 다른 필드도 초기화할 수 있습니다.
+        // 대리점 정보가 선택/등록되면 사용자 계정 정보는 유지합니다.
+        // idCheck 상태는 그대로 유지하는 것이 좋습니다.
       });
-      CustomSnackbar().showSnackbar(
+      Get.snackbar(
         // 사용자에게 대리점 선택/등록 완료 알림
-        title: '대리점 선택 완료',
-        message: '${_registeredStoreInfo!['storeName']} 대리점이 선택되었습니다.',
+        '대리점 선택 완료',
+        '${_registeredStoreInfo!['storeName']} 대리점이 선택되었습니다.',
         backgroundColor: Colors.blueAccent,
-        textColor: Colors.white,
+        colorText: Colors.white,
       );
     } else {
-      // 대리점 등록/선택이 취소되었을 때 (결과가 null이거나 Map이 아닐 때)
-      // 현재 선택된 대리점 정보를 그대로 유지합니다.
-      CustomSnackbar().showSnackbar(
-        // 사용자에게 대리점 선택 취소 알림
-        title: '알림',
-        message: '대리점 선택이 취소되었습니다.',
-        backgroundColor: Colors.grey,
-        textColor: Colors.white,
-      );
+      print('>>> CompanyCreateStore에서 유효하지 않거나 null 결과 받음: $result'); // 로깅 추가
+      // 대리점 등록/선택이 취소되었거나 유효하지 않은 결과일 때
+      // 현재 선택된 대리점 정보(_registeredStoreInfo)를 그대로 유지합니다.
+      // 상태를 변경하지 않으므로 setState 호출 필요 없음
+
+      // 사용자에게 대리점 선택 취소 알림 (선택 사항, 뒤로 가기 시 매번 뜰 수 있음)
+      // Get.snackbar(
+      //    '알림',
+      //    '대리점 선택이 취소되었습니다.',
+      //    backgroundColor: Colors.grey,
+      //    colorText: Colors.white,
+      // );
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
+    // GetX 사용을 위해 context 대신 build(context) 사용
     return Scaffold(
       appBar: AppBar(
         title: Text('사용자 계정 등록'), // 제목 (대리점장 사용자 등록 의미)
@@ -364,11 +378,11 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
                     idDoubleCheck(idCon.text);
                   } else {
                     // 이미 확인 완료된 상태일 때의 액션 (선택 사항)
-                    CustomSnackbar().showSnackbar(
-                      title: '확인 완료',
-                      message: '이미 중복 확인된 아이디입니다.',
+                    Get.snackbar(
+                      '확인 완료',
+                      '이미 중복 확인된 아이디입니다.',
                       backgroundColor: Colors.orange,
-                      textColor: Colors.white,
+                      colorText: Colors.white,
                     );
                   }
                 },

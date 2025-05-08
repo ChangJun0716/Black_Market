@@ -967,4 +967,160 @@ class DatabaseHandler {
     int count = Sqflite.firstIntValue(queryResult) ?? 0;
     return count;
   }
+
+  // Company Create Announcement: Insert new notice record
+  // Inserts data into the 'createNotice' table.
+  Future<int> insertNotice(Map<String, dynamic> noticeData) async {
+    final Database db = await initializeDB();
+    int result = await db.insert(
+      'createNotice', // 삽입할 테이블
+      noticeData, // 공지사항 정보 (Map 형태로 받음)
+      // createNotice 테이블에는 primary key나 unique 제약 조건이 없는 것으로 보임 (initializeDB 기반)
+      // 따라서 삽입 실패는 드물겠지만, DB 오류 가능성은 있음.
+    );
+    return result;
+  }
+
+  // Company Purchase List: Get total purchase amount for a date range and optional store
+  // Aggregates purchasePrice from purchase table
+  Future<int> getTotalPurchaseAmount({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? storeCode, // null이면 전체 대리점
+  }) async {
+    final Database db = await initializeDB();
+
+    // 종료일의 시간을 하루의 끝으로 설정
+    DateTime adjustedEndDate = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+    );
+
+    String sql = '''
+      SELECT SUM(purchasePrice) AS totalAmount
+      FROM purchase
+      WHERE purchaseDate BETWEEN ? AND ?
+    ''';
+
+    List<dynamic> args = [
+      startDate.toIso8601String().split('T')[0],
+      adjustedEndDate.toIso8601String().split('T')[0],
+    ];
+
+    // 특정 대리점 코드가 지정된 경우 조건 추가
+    if (storeCode != null && storeCode.isNotEmpty) {
+      sql += ' AND pStoreCode = ?';
+      args.add(storeCode);
+    }
+
+    final List<Map<String, dynamic>> queryResult = await db.rawQuery(sql, args);
+
+    // SUM 결과는 단일 행, 단일 컬럼으로 반환됩니다.
+    if (queryResult.isNotEmpty && queryResult.first['totalAmount'] != null) {
+      // SUM 결과가 INTEGER 또는 REAL일 수 있으므로 int로 변환
+      return queryResult.first['totalAmount'] as int;
+    }
+
+    return 0; // 결과가 없거나 null이면 총액 0 반환
+  }
+
+  // Company Purchase List: Get purchase list details for a date range and optional store
+  // Fetches purchase records with joined user and product info
+  Future<List<Map<String, dynamic>>> getPurchaseList({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? storeCode, // null이면 전체 대리점
+  }) async {
+    final Database db = await initializeDB();
+
+    // 종료일의 시간을 하루의 끝으로 설정
+    DateTime adjustedEndDate = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+    );
+
+    String sql = '''
+      SELECT
+        p.purchaseId,
+        p.purchaseDate,
+        p.purchaseQuanity,
+        p.purchasePrice,
+        p.pStoreCode,
+        s.storeName, -- 대리점 이름 조인
+        u.name AS customerName, -- 고객 이름 조인
+        pr.productsName, -- 제품 이름 조인
+        pr.productsColor,
+        pr.productsSize
+      FROM purchase p
+      JOIN store s ON p.pStoreCode = s.storeCode
+      JOIN users u ON p.pUserId = u.userid
+      JOIN products pr ON p.oproductCode = pr.productsCode
+      WHERE p.purchaseDate BETWEEN ? AND ?
+    ''';
+
+    List<dynamic> args = [
+      startDate.toIso8601String().split('T')[0],
+      adjustedEndDate.toIso8601String().split('T')[0],
+    ];
+
+    // 특정 대리점 코드가 지정된 경우 조건 추가
+    if (storeCode != null && storeCode.isNotEmpty) {
+      sql += ' AND p.pStoreCode = ?';
+      args.add(storeCode);
+    }
+
+    sql += ' ORDER BY p.purchaseDate DESC'; // 최신순 정렬 (선택 사항)
+
+    final List<Map<String, dynamic>> queryResult = await db.rawQuery(sql, args);
+
+    return queryResult; // 구매 목록 (Map 리스트) 반환
+  }
+
+  // Company Purchase List: Get total purchase amount per store for a date range
+  // Groups by storeCode and storeName to get per-store totals
+  Future<List<Map<String, dynamic>>> getTotalPurchaseAmountPerStore({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final Database db = await initializeDB();
+
+    // 종료일의 시간을 하루의 끝으로 설정
+    DateTime adjustedEndDate = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+    );
+
+    String sql = '''
+      SELECT
+        p.pStoreCode,
+        s.storeName,
+        SUM(p.purchasePrice) AS totalAmount
+      FROM purchase p
+      JOIN store s ON p.pStoreCode = s.storeCode
+      WHERE p.purchaseDate BETWEEN ? AND ?
+      GROUP BY p.pStoreCode, s.storeName -- 대리점별로 그룹화
+      ORDER BY s.storeName -- 대리점 이름으로 정렬 (선택 사항)
+    ''';
+
+    List<dynamic> args = [
+      startDate.toIso8601String().split('T')[0],
+      adjustedEndDate.toIso8601String().split('T')[0],
+    ];
+
+    final List<Map<String, dynamic>> queryResult = await db.rawQuery(sql, args);
+
+    return queryResult; // 대리점별 총액 목록 (Map 리스트) 반환
+  }
 }// class
