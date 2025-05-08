@@ -136,7 +136,7 @@ class _UserMapState extends State<CustomerSelectStore> {
                 ],
               ),
             ),
-              ...storeList.map(
+              ...storeList.where((res) => res.latitude != 0 && res.longitude != 0).map(
                 (res) => Marker(
                   width: 80,
                   height: 80,

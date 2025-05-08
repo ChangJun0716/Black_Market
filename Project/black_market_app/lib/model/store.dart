@@ -15,10 +15,10 @@ class Store {
     }
   );
 
-  Store.fromMap(Map<String, dynamic> res)
-  : storeCode = res['storeCode'],
-  storeName = res['storeName'],
-  address = res['address'],
-  longitude = res['longitude'],
-  latitude = res['latitude'];
+Store.fromMap(Map<String, dynamic> res)
+  : storeCode = res['storeCode'] ?? '',
+    storeName = res['storeName'] ?? '',
+    address = res['address'] ?? '',
+    longitude = (res['longitude'] as num?)?.toDouble() ?? 0.0,
+    latitude = (res['latitude'] as num?)?.toDouble() ?? 0.0;
 }

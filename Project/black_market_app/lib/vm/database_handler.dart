@@ -730,8 +730,7 @@ class DatabaseHandler {
       p.productsPrice,
       p.productsSize,
       p.productsImage,
-      r.introductionPhoto,
-      r.productDescription
+      r.introductionPhoto
     FROM products p
     LEFT JOIN productRegistration r
     ON p.productsCode = r.pProductCode
@@ -771,17 +770,28 @@ class DatabaseHandler {
     );
     return queryResult.map((e) => CreateNotice.fromMap(e)).toList();
   }
-
   // ------------------------------------------------ //
   // query shopping Cart
-  Future<List<shoppingCart>> queryShoppingCart(String pUserId) async {
-    final Database db = await initializeDB();
-    final List<Map<String, Object?>> queryResult = await db.rawQuery(
-      "SELECT pr.productsName, pr.productsImage, p.purchaseQuantity FROM purchase p INNER JOIN products pr ON p.oproductCode = pr.productsCode WHERE p.pUserId = ? and pr.purchaseDeliveryStatus = '장바구니'",
-      [pUserId],
-    );
-    return queryResult.map((e) => shoppingCart.fromMap(e)).toList();
-  }
+Future<List<ShoppingCart>> queryShoppingCart(String pUserId) async {
+  final Database db = await initializeDB();
+  final List<Map<String, Object?>> queryResult = await db.rawQuery(
+    '''
+    SELECT 
+      p.purchaseId, 
+      pr.productsName, 
+      pr.productsImage, 
+      p.purchaseQuanity, 
+      p.purchasePrice, 
+      s.storeName
+    FROM purchase p
+    INNER JOIN products pr ON p.oproductCode = pr.productsCode
+    INNER JOIN store s ON p.pStoreCode = s.storeCode
+    WHERE p.pUserId = ? AND p.purchaseDeliveryStatus = ?
+    ''',
+    [pUserId, '장바구니'],
+  );
+  return queryResult.map((e) => ShoppingCart.fromMap(e)).toList();
+}
 
   // ------------------------------------------------ //
   // query store
@@ -1225,4 +1235,37 @@ class DatabaseHandler {
     }
     return null; // Store not found
   }
+// ------------------------------ //
+// update purchase List : deliveryState '장바구니' -> '주문완료'
+Future<int> updatePurchaseList(int purchaseId, String deliveryState) async {
+  final Database db = await initializeDB();
+  final int result = await db.rawUpdate(
+    '''
+    UPDATE purchase 
+    SET purchaseDeliveryStatus = ? 
+    WHERE purchaseId = ?
+    ''',
+    [deliveryState, purchaseId],
+  );
+  return result;
+}
+// ------------------------------ //
+// query purchase List
+Future<List<Map<String, dynamic>>> queryUserPurchaseList(String pUserId) async {
+  final Database db = await initializeDB();
+  final List<Map<String, Object?>> queryResult = await db.rawQuery('''
+    SELECT 
+      p.purchaseId,
+      p.purchasePrice,
+      p.purchaseDeliveryStatus,
+      pr.productsName
+    FROM purchase p
+    JOIN products pr ON p.oproductCode = pr.productsCode
+    WHERE p.pUserId = ? AND p.purchaseDeliveryStatus != '장바구니'
+  ''', [pUserId]);
+
+  return queryResult;
+}
+// ------------------------------ //
+
 } // class
