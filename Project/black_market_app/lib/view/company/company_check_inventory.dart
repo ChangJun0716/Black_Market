@@ -163,11 +163,7 @@ class _CompanyCheckInventoryState extends State<CompanyCheckInventory> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("재고 확인",
-        
-        style: TextStyle(
-          color: Colors.white
-        ),),
+        title: const Text("재고 확인"),
         backgroundColor: Colors.black,
       ),
       body: GestureDetector(

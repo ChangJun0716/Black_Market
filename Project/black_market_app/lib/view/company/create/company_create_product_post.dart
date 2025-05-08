@@ -2,8 +2,8 @@
 import 'dart:typed_data';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/product_registration.dart';
-import 'package:black_market_app/view/post/post_block.dart';
-import 'package:black_market_app/view/post/post_block_editor.dart';
+import 'package:black_market_app/view/company/post/post_block.dart';
+import 'package:black_market_app/view/company/post/post_block_editor.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

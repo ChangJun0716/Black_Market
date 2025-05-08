@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'package:black_market_app/model/create_notice.dart';
 import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/model/products.dart';
+import 'package:black_market_app/model/purchase.dart';
 import 'package:black_market_app/model/return_investigation.dart';
+import 'package:black_market_app/model/shopping_cart_from_purchase.dart';
 import 'package:black_market_app/model/stock_receipts.dart';
 import 'package:black_market_app/model/users.dart';
 import 'package:path/path.dart';
@@ -609,7 +612,7 @@ Future<int> insertProduct(Products product) async {
 Future<List<Products>> getAllProducts1() async {
   final db = await initializeDB();
   final List<Map<String, dynamic>> result = await db.query('products');
-  return result.map((item) => Products.fromMap(item)).toList();
+  return result.map((item) => Products.formMap(item)).toList();
 }
 
 //게시글 조회
@@ -665,7 +668,7 @@ Future<List<Products>> getProductsByName(String name) async {
     where: 'productsName = ?',
     whereArgs: [name],
   );
-  return result.map((item) => Products.fromMap(item)).toList();
+  return result.map((item) => Products.formMap(item)).toList();
 }
 
 
@@ -682,7 +685,7 @@ Future<List<Products>> getProductsByName(String name) async {
     )
     ORDER BY productsName
   ''');
-    return queryResult.map((e) => Products.fromMap(e)).toList();
+    return queryResult.map((e) => Products.formMap(e)).toList();
   }
 
   // ------------------------------------------------ //
@@ -1175,4 +1178,3 @@ Future<List<Products>> getProductsByName(String name) async {
     return queryResult; // 대리점별 총액 목록 (Map 리스트) 반환
   }
 }// class
-

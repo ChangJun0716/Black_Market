@@ -1,4 +1,3 @@
-//입출고 관리
 import 'package:black_market_app/view/company/company_product_delivery.dart';
 import 'package:black_market_app/view/company/company_product_stock.dart';
 import 'package:flutter/material.dart';
@@ -36,14 +35,10 @@ class _CompanyOrderManagementState extends State<CompanyOrderManagement> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('입출고 관리',
-        style: TextStyle(
-          color: Colors.white
-        ),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('입출고 관리'),
+        backgroundColor: Colors.white,
       ),
       body: Column(
         children: [
@@ -52,8 +47,8 @@ class _CompanyOrderManagementState extends State<CompanyOrderManagement> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: const [
-                Expanded(flex: 1, child: Text('     ', style: TextStyle(color: Colors.white))),
-                Expanded(flex: 2, child: Text('제품ID', style: TextStyle(color: Colors.white))),
+                Expanded(flex: 1, child: Text('체크', style: TextStyle(color: Colors.white))),
+                Expanded(flex: 2, child: Text('ID', style: TextStyle(color: Colors.white))),
                 Expanded(flex: 3, child: Text('제품명', style: TextStyle(color: Colors.white))),
                 Expanded(flex: 2, child: Text('제조사', style: TextStyle(color: Colors.white))),
                 Expanded(flex: 2, child: Text('색상', style: TextStyle(color: Colors.white))),
@@ -93,57 +88,44 @@ class _CompanyOrderManagementState extends State<CompanyOrderManagement> {
             ),
           ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final selectedItems = stockList
-                          .where((item) => checkStates[item['productsCode']] == true)
-                          .toList();
-                
-                      if (selectedItems.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('입고할 항목을 선택해주세요.')),
-                        );
-                        return;
-                      }
-                
-                      Get.to(() => CompanyProductStock(), arguments: selectedItems);
-                    },
-                    child: const Text('입고하기'),
-                  ),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    final selectedItems = stockList
+                        .where((item) => checkStates[item['productsCode']] == true)
+                        .toList();
+
+                    if (selectedItems.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('입고할 항목을 선택해주세요.')),
+                      );
+                      return;
+                    }
+
+                    Get.to(() => CompanyProductStock(), arguments: selectedItems);
+                  },
+                  child: const Text('입고하기'),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final selectedItems = stockList
-                          .where((item) => checkStates[item['productsCode']] == true)
-                          .toList();
-                
-                      if (selectedItems.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('출고할 항목을 선택해주세요.')),
-                        );
-                        return;
-                      }
-                
-                      Get.to(() => CompanyProductDelivery(), arguments: selectedItems);
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                    child: const Text('출고하기',
-                    style: TextStyle(
-                      color: Colors.black
-                
-                    ),
-                    ),
-                  ),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    final selectedItems = stockList
+                        .where((item) => checkStates[item['productsCode']] == true)
+                        .toList();
+
+                    if (selectedItems.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('출고할 항목을 선택해주세요.')),
+                      );
+                      return;
+                    }
+
+                    Get.to(() => CompanyProductDelivery(), arguments: selectedItems);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('출고하기'),
                 ),
               ),
             ],

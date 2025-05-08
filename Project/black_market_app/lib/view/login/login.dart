@@ -2,7 +2,12 @@ import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textbutton.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
+import 'package:black_market_app/view/company/company_purchase_list.dart';
+import 'package:black_market_app/view/company/create/company_create_account.dart';
+import 'package:black_market_app/view/company/create/company_create_announcement.dart';
+import 'package:black_market_app/view/customer/product/customer_product_list.dart';
 import 'package:black_market_app/view/login/create_account.dart';
+import 'package:black_market_app/view/store_manager/store_home.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -32,7 +37,7 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -76,13 +81,14 @@ class _LoginState extends State<Login> {
       int memberType = await handler.userMemberType(id); // 회원 아이디로 분류코드 식별
       if (memberType == 1) {
         saveStorage(memberType);
-        // 사용자 페이지
+        Get.to(CustomerProductList());
       } else if (memberType == 2) {
         saveStorage(memberType);
         // 본사 페이지
+        Get.to(CompanyPurchaseList());
       } else {
         saveStorage(memberType);
-        // 대리점 페이지
+        Get.to(StoreHomePage());
       }
     } else {
       // id,pw 일치하는 값이 없을 때
