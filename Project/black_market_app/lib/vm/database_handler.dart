@@ -703,9 +703,33 @@ class DatabaseHandler {
 
   // ------------------Product----------------------- //
   // customer_product_list.dart : product list (query)
-Future<List<GroupedProduct>> queryGroupedProducts() async {
-  final db = await initializeDB();
-  final result = await db.rawQuery('''
+  // Future<List<GroupedProduct>> queryGroupedProducts() async {
+  //   final db = await initializeDB();
+  //   final result = await db.rawQuery('''
+  //     SELECT
+  //       p.productsCode AS pProductCode,
+  //       p.productsName,
+  //       p.productsPrice,
+  //       p.productsColor,
+  //       pr.ptitle,
+  //       pr.introductionPhoto
+  //     FROM products p
+  //     JOIN productRegistration pr ON p.productsCode = pr.pProductCode
+  //     WHERE p.productsCode IN (
+  //         SELECT MIN(productsCode)
+  //         FROM products
+  //         GROUP BY productsName
+  //       )
+  //     ORDER BY p.productsName;
+  //   ''');
+
+  //   return result.map((e) => GroupedProduct.fromMap(e)).toList();
+  // }
+  Future<List<GroupedProduct>> queryGroupedProducts({String? keyword}) async {
+    final db = await initializeDB();
+
+    // 기본 WHERE 조건
+    String baseQuery = '''
     SELECT 
       p.productsCode AS pProductCode,
       p.productsName,
@@ -716,33 +740,45 @@ Future<List<GroupedProduct>> queryGroupedProducts() async {
     FROM products p
     JOIN productRegistration pr ON p.productsCode = pr.pProductCode
     WHERE p.productsCode IN (
-        SELECT MIN(productsCode)
-        FROM products
-        GROUP BY productsName
-      )
-    ORDER BY p.productsName;
-  ''');
+      SELECT MIN(productsCode)
+      FROM products
+      GROUP BY productsName
+    )
+  ''';
 
-  return result.map((e) => GroupedProduct.fromMap(e)).toList();
-}
+    // 조건 및 파라미터
+    List<String> whereArgs = [];
+    if (keyword != null && keyword.isNotEmpty) {
+      baseQuery += ' AND pr.ptitle LIKE ?';
+      whereArgs.add('%$keyword%');
+    }
 
+    baseQuery += ' ORDER BY p.productsName;';
+
+    final result = await db.rawQuery(baseQuery, whereArgs);
+    return result.map((e) => GroupedProduct.fromMap(e)).toList();
+  }
 
   // ------------------------------------------------ //
-Future<String?> findProductNameByTitle(String ptitle) async {
-  final db = await initializeDB();
-  final result = await db.rawQuery('''
+  Future<String?> findProductNameByTitle(String ptitle) async {
+    final db = await initializeDB();
+    final result = await db.rawQuery(
+      '''
     SELECT p.productsName
     FROM products p
     JOIN productRegistration r ON p.productsCode = r.pProductCode
     WHERE r.ptitle = ?
     LIMIT 1
-  ''', [ptitle]);
+  ''',
+      [ptitle],
+    );
 
-  if (result.isNotEmpty) {
-    return result.first['productsName'].toString();
+    if (result.isNotEmpty) {
+      return result.first['productsName'].toString();
+    }
+    return null;
   }
-  return null;
-}
+
   // ------------------------------------------------ //
   Future<List<Map<String, dynamic>>> queryProductDetails(
     String productName,
@@ -799,12 +835,13 @@ Future<String?> findProductNameByTitle(String ptitle) async {
     );
     return queryResult.map((e) => CreateNotice.fromMap(e)).toList();
   }
+
   // ------------------------------------------------ //
   // query shopping Cart
-Future<List<ShoppingCart>> queryShoppingCart(String pUserId) async {
-  final Database db = await initializeDB();
-  final List<Map<String, Object?>> queryResult = await db.rawQuery(
-    '''
+  Future<List<ShoppingCart>> queryShoppingCart(String pUserId) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      '''
     SELECT 
       p.purchaseId, 
       pr.productsName, 
@@ -817,10 +854,10 @@ Future<List<ShoppingCart>> queryShoppingCart(String pUserId) async {
     INNER JOIN store s ON p.pStoreCode = s.storeCode
     WHERE p.pUserId = ? AND p.purchaseDeliveryStatus = ?
     ''',
-    [pUserId, '장바구니'],
-  );
-  return queryResult.map((e) => ShoppingCart.fromMap(e)).toList();
-}
+      [pUserId, '장바구니'],
+    );
+    return queryResult.map((e) => ShoppingCart.fromMap(e)).toList();
+  }
 
   // ------------------------------------------------ //
   // query store
@@ -1264,25 +1301,30 @@ Future<List<ShoppingCart>> queryShoppingCart(String pUserId) async {
     }
     return null; // Store not found
   }
-// ------------------------------ //
-// update purchase List : deliveryState '장바구니' -> '주문완료'
-Future<int> updatePurchaseList(int purchaseId, String deliveryState) async {
-  final Database db = await initializeDB();
-  final int result = await db.rawUpdate(
-    '''
+
+  // ------------------------------ //
+  // update purchase List : deliveryState '장바구니' -> '주문완료'
+  Future<int> updatePurchaseList(int purchaseId, String deliveryState) async {
+    final Database db = await initializeDB();
+    final int result = await db.rawUpdate(
+      '''
     UPDATE purchase 
     SET purchaseDeliveryStatus = ? 
     WHERE purchaseId = ?
     ''',
-    [deliveryState, purchaseId],
-  );
-  return result;
-}
-// ------------------------------ //
-// query purchase List
-Future<List<Map<String, dynamic>>> queryUserPurchaseList(String pUserId) async {
-  final Database db = await initializeDB();
-  final List<Map<String, Object?>> queryResult = await db.rawQuery('''
+      [deliveryState, purchaseId],
+    );
+    return result;
+  }
+
+  // ------------------------------ //
+  // query purchase List
+  Future<List<Map<String, dynamic>>> queryUserPurchaseList(
+    String pUserId,
+  ) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      '''
     SELECT 
       p.purchaseId,
       p.purchasePrice,
@@ -1291,25 +1333,30 @@ Future<List<Map<String, dynamic>>> queryUserPurchaseList(String pUserId) async {
     FROM purchase p
     JOIN products pr ON p.oproductCode = pr.productsCode
     WHERE p.pUserId = ? AND p.purchaseDeliveryStatus != '장바구니'
-  ''', [pUserId]);
+  ''',
+      [pUserId],
+    );
 
-  return queryResult;
-}
-// ------------------------------ //
-// query announcement by title
-Future<List<CreateNotice>> queryAnnouncementByTitle(String title)async{
-  final Database db = await initializeDB();
-  final List<Map<String,Object?>> queryResult = await db.rawQuery(
-    "select * from createNotice where title = ?",
-    [title]
-  );
-  return queryResult.map((e) => CreateNotice.fromMap(e),).toList();
-}
-// ------------------------------ //
-Future<PurchaseDetail?> queryPurchaseDetail(int purchaseId) async {
-  final Database db = await initializeDB();
+    return queryResult;
+  }
 
-  final result = await db.rawQuery('''
+  // ------------------------------ //
+  // query announcement by title
+  Future<List<CreateNotice>> queryAnnouncementByTitle(String title) async {
+    final Database db = await initializeDB();
+    final List<Map<String, Object?>> queryResult = await db.rawQuery(
+      "select * from createNotice where title = ?",
+      [title],
+    );
+    return queryResult.map((e) => CreateNotice.fromMap(e)).toList();
+  }
+
+  // ------------------------------ //
+  Future<PurchaseDetail?> queryPurchaseDetail(int purchaseId) async {
+    final Database db = await initializeDB();
+
+    final result = await db.rawQuery(
+      '''
     SELECT 
       p.productsName,
       p.productsColor,
@@ -1325,27 +1372,25 @@ Future<PurchaseDetail?> queryPurchaseDetail(int purchaseId) async {
     LEFT JOIN productRegistration pr ON p.productsCode = pr.pProductCode
     JOIN store s ON pu.pStoreCode = s.storeCode
     WHERE pu.purchaseId = ?
-  ''', [purchaseId]);
+  ''',
+      [purchaseId],
+    );
 
-  if (result.isNotEmpty) {
-    return PurchaseDetail.fromMap(result.first);
-  } else {
-    return null;
+    if (result.isNotEmpty) {
+      return PurchaseDetail.fromMap(result.first);
+    } else {
+      return null;
+    }
   }
-}
-// ------------------------------ //
-Future<List<Map<String, dynamic>>> queryUserPurchaseListWithTitle(String keyword) async {
-  final Database db = await initializeDB();
-  return await db.rawQuery('''
-    SELECT pu.purchaseId, p.productsName, pu.purchasePrice, pu.purchaseDeliveryStatus
-    FROM purchase pu
-    JOIN products p ON pu.oProductCode = p.productsCode
-    LEFT JOIN productRegistration pr ON p.productsCode = pr.pProductCode
-    WHERE pr.ptitle LIKE ?
-    ORDER BY pu.purchaseDate DESC
-  ''', ['%$keyword%']);
-}
 
-// ------------------------------ //
-
+  // ------------------------------ //
+  Future<void> deletePurchaseItem(int purchaseId) async {
+    final db = await initializeDB();
+    await db.delete(
+      'purchase',
+      where: 'purchaseId = ?',
+      whereArgs: [purchaseId],
+    );
+  }
+  // ------------------------------ //
 } // class

@@ -2,6 +2,7 @@
 import 'package:black_market_app/message/custom_dialogue.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -32,6 +33,13 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
     setState(() {});
   }
 
+  // ------------------------- //
+  Future<void> deleteCartItem(int purchaseId) async {
+    await handler.deletePurchaseItem(purchaseId); // DB에서 삭제
+    setState(() {});
+  }
+
+  // ------------------------- //
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,39 +66,78 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
             return ListView.builder(
               itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    creditDialogue(
-                      snapshot.data![index].productsName,
-                      snapshot.data![index].purchaseQuantity,
-                      snapshot.data![index].purchasePrice,
-                      snapshot.data![index].storeName,
-                      snapshot.data![index].purchaseId,
-                    );
-                  },
-                  child: Card(
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Image.memory(
-                            snapshot.data![index].productsImage,
-                            width: 80,
-                            height: 80,
+                return Slidable(
+                  endActionPane: ActionPane(
+                    motion: const DrawerMotion(),
+                    children: [
+                      SlidableAction(
+                        onPressed: (context) {
+                          Get.dialog(
+                            AlertDialog(
+                              title: const Text('삭제 확인'),
+                              content: const Text('정말로 장바구니에서 삭제하시겠습니까?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(), // 취소
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    await deleteCartItem(
+                                      snapshot.data![index].purchaseId,
+                                    );
+                                    Get.back(); // 다이얼로그 닫기
+                                  },
+                                  child: const Text(
+                                    '삭제',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        icon: Icons.delete,
+                        label: '삭제',
+                      ),
+                    ],
+                  ),
+                  child: GestureDetector(
+                    onTap: () {
+                      creditDialogue(
+                        snapshot.data![index].productsName,
+                        snapshot.data![index].purchaseQuantity,
+                        snapshot.data![index].purchasePrice,
+                        snapshot.data![index].storeName,
+                        snapshot.data![index].purchaseId,
+                      );
+                    },
+                    child: Card(
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Image.memory(
+                              snapshot.data![index].productsImage,
+                              width: 80,
+                              height: 80,
+                            ),
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '제품명 : ${snapshot.data![index].productsName}',
-                            ),
-                            Text(
-                              '수량    : ${snapshot.data![index].purchaseQuantity} 개',
-                            ),
-                          ],
-                        ),
-                      ],
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '제품명 : ${snapshot.data![index].productsName}',
+                              ),
+                              Text(
+                                '수량    : ${snapshot.data![index].purchaseQuantity} 개',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

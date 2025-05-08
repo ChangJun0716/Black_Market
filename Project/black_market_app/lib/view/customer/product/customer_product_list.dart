@@ -1,3 +1,4 @@
+import 'package:black_market_app/model/grouped_products.dart';
 import 'package:black_market_app/view/customer/customer_announcement.dart';
 import 'package:black_market_app/view/customer/product/customer_product_detail.dart';
 import 'package:black_market_app/view/customer/purchase/customer_purchase_list.dart';
@@ -29,12 +30,8 @@ class _CustomerProductListState extends State<CustomerProductList> {
     uid = box.read('uid') ?? '';
   }
 
-  Future<List<dynamic>> fetchData() {
-    if (searchKeyword.isEmpty) {
-      return handler.queryGroupedProducts();
-    } else {
-      return handler.queryUserPurchaseListWithTitle(searchKeyword);
-    }
+  Future<List<GroupedProduct>> fetchData() {
+    return handler.queryGroupedProducts(keyword: searchKeyword);
   }
 
   @override
@@ -133,17 +130,24 @@ class _CustomerProductListState extends State<CustomerProductList> {
                     final item = products[index];
                     return GestureDetector(
                       onTap: () {
-                        Get.to(const CustomerProductDetail(), arguments: item.ptitle);
+                        Get.to(
+                          const CustomerProductDetail(),
+                          arguments: item.ptitle,
+                        );
                       },
                       child: Card(
                         elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
                               child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12),
+                                ),
                                 child: Image.memory(
                                   item.introductionPhoto,
                                   fit: BoxFit.cover,
@@ -151,17 +155,24 @@ class _CustomerProductListState extends State<CustomerProductList> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4.0,
+                                horizontal: 8,
+                              ),
                               child: Column(
                                 children: [
                                   Text(
                                     item.ptitle,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                   Text(
                                     '${item.productsPrice}원',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   Text(
                                     '색상: ${item.productsColor}',
