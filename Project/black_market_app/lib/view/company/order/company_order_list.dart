@@ -1,16 +1,17 @@
+//발주 리스트 
 import 'package:black_market_app/view/company/order/company_order_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 
-class ApprovalListPage extends StatefulWidget {
-  const ApprovalListPage({super.key});
+class CompanyOrderList extends StatefulWidget {
+  const CompanyOrderList({super.key});
 
   @override
-  State<ApprovalListPage> createState() => _ApprovalListPageState();
+  State<CompanyOrderList> createState() => _CompanyOrderListState();
 }
 
-class _ApprovalListPageState extends State<ApprovalListPage> {
+class _CompanyOrderListState extends State<CompanyOrderList> {
   late DatabaseHandler handler;
   List<Map<String, dynamic>> approvals = [];
   String selectedStatus = '전체';
