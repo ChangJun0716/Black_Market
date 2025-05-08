@@ -2,7 +2,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:black_market_app/view/post/post_block.dart';
+import 'package:black_market_app/view/company/post/post_block.dart';
+
 
 
 class ProductRegistration {
@@ -44,3 +45,4 @@ class ProductRegistration {
     );
   }
 }
+
