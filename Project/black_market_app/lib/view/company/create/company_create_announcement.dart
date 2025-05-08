@@ -248,7 +248,6 @@ class _CompanyCreateAnnouncementState extends State<CompanyCreateAnnouncement> {
                 child: Image.memory(_photoBytes!, height: 150), // 바이트 데이터로 미리보기
               ),
             SizedBox(height: 24),
-
             // 공지사항 등록 버튼
             Center(
               // 버튼을 중앙에 배치

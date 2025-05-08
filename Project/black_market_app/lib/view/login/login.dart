@@ -2,6 +2,7 @@ import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textbutton.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
+import 'package:black_market_app/view/company/company_home.dart';
 import 'package:black_market_app/view/company/company_purchase_list.dart';
 import 'package:black_market_app/view/company/create/company_create_account.dart';
 import 'package:black_market_app/view/company/create/company_create_announcement.dart';
@@ -85,7 +86,7 @@ class _LoginState extends State<Login> {
       } else if (memberType == 2) {
         saveStorage(memberType);
         // 본사 페이지
-        Get.to(CompanyPurchaseList());
+        Get.to(CompanyHome());
       } else {
         saveStorage(memberType);
         Get.to(StoreHomePage());
