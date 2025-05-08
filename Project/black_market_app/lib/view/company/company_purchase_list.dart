@@ -308,7 +308,6 @@ class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
               ],
             ),
             SizedBox(height: 16),
-
             // 대리점 선택
             Text(
               '대리점 선택',

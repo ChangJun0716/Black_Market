@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:black_market_app/vm/database_handler.dart'; // DatabaseHandler 임포트
 import 'package:black_market_app/utility/custom_textfield.dart'; // CustomTextField 사용
 import 'package:black_market_app/utility/custom_button.dart'; // CustomButton 사용
-import 'package:get/get.dart'; // GetX 임포트 (Snackbar 등을 위해 필요할 수 있습니다)
+import 'package:get/get.dart'; // GetX 임포트 (Snackbar 사용)
+import 'package:get_storage/get_storage.dart'; // GetStorage 임포트
 
 // 픽업 대기 주문 정보를 상태 관리를 위해 담는 클래스
 class PickupOrderState {
@@ -32,10 +33,16 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
   List<PickupOrderState> filteredPickupOrders =
       []; // 검색어에 따라 필터링된 목록 (PickupOrderState 객체)
 
-  // 로그인한 대리점 코드 (예시, 실제 앱에서는 로그인 정보나 다른 방식으로 가져와야 합니다.)
-  // TODO: 실제 로그인된 대리점의 storeCode를 가져오는 로직 구현 필요
-  String loggedInStoreCode =
-      'YOUR_LOGGED_IN_STORE_CODE'; // <<< 중요: 여기를 실제 대리점 코드로 바꿔주세요!
+  // GetStorage에서 읽어온 사용자 ID
+  String? _loggedInUserId;
+
+  // 로그인된 대리점 코드 (사용자 ID로 조회)
+  String? _loggedInStoreCode; // 초기값 null
+  bool _isLoadingStoreCode = true; // storeCode 로딩 상태
+
+  // DatabaseHandler 인스턴스
+  late DatabaseHandler _handler;
+  final box = GetStorage(); // GetStorage 인스턴스
 
   // DropdownButton에 표시될 상태 목록 (실제 DB purchaseDeliveryStatus 값과 일치해야 함)
   // TODO: 실제 purchaseDeliveryStatus 필드의 가능한 모든 상태 값을 정의해야 합니다.
@@ -48,49 +55,115 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
   @override
   void initState() {
     super.initState();
-    // 페이지 로드 시 모든 픽업 대기 주문 목록 가져오기
-    _fetchPickupOrders();
+    _handler = DatabaseHandler(); // 핸들러 인스턴스 생성
+
+    // GetStorage에서 로그인된 사용자 ID 읽어오기
+    _loggedInUserId = box.read('uid');
+    print(
+      '>>> StoreProductCondition: GetStorage에서 읽어온 uid=$_loggedInUserId',
+    ); // 로깅
+
+    // 사용자 ID가 유효한 경우 해당 사용자의 storeCode 가져오기 시작
+    if (_loggedInUserId != null) {
+      _fetchStoreCodeByUserId(_loggedInUserId!); // storeCode 가져온 후 데이터 로딩
+    } else {
+      // 사용자 ID를 찾지 못한 경우 처리
+      print('>>> StoreProductCondition: GetStorage에 유효한 사용자 ID가 없습니다.');
+      _isLoadingStoreCode = false; // 로딩 완료 처리 (실패)
+      _loggedInStoreCode = null; // storeCode 상태 초기화
+      // 사용자에게 알림 또는 로그인 페이지로 강제 이동 고려
+      Get.snackbar(
+        '오류',
+        '로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
 
     // 검색 TextField의 텍스트 변경을 감지하여 목록 필터링
-    // debounce 시간을 주어 입력이 잠시 멈췄을 때만 검색하도록 하면 성능 향상에 도움이 될 수 있습니다.
-    // _searchController.addListener(() {
-    //   if (_debounce?.isActive ?? false) _debounce!.cancel();
-    //   _debounce = Timer(const Duration(milliseconds: 500), () {
-    //     _filterOrders();
-    //   });
-    // });
-    _searchController.addListener(_filterOrders); // 간단하게 실시간 검색 유지
+    _searchController.addListener(_filterOrders);
   }
-
-  // Timer? _debounce; // Debounce Timer 변수 (필요시 주석 해제)
 
   @override
   void dispose() {
     // 컨트롤러 메모리 해제 및 리스너 제거
     _searchController.removeListener(_filterOrders);
-    // _debounce?.cancel(); // Debounce Timer 해제 (필요시 주석 해제)
     _searchController.dispose();
     super.dispose();
   }
 
+  // 사용자 ID로 대리점 코드를 가져오는 메서드 및 데이터 로딩 시작
+  Future<void> _fetchStoreCodeByUserId(String userId) async {
+    print('>>> StoreProductCondition: 사용자 ID ($userId)로 대리점 코드 가져오기 시도'); // 로깅
+    try {
+      // DatabaseHandler의 getStoreCodeByUserId 메서드를 사용하여 storeCode 가져오기
+      final String? storeCode = await _handler.getStoreCodeByUserId(userId);
+      print('>>> StoreProductCondition: 검색된 storeCode = $storeCode'); // 로깅
+
+      setState(() {
+        _loggedInStoreCode = storeCode; // storeCode 상태 업데이트
+        _isLoadingStoreCode = false; // storeCode 로딩 완료
+      });
+
+      if (storeCode != null) {
+        // storeCode를 가져온 후 초기 데이터 로딩 시작
+        _fetchPickupOrders(); // _fetchPickupOrders 내부에서 _loggedInStoreCode 사용
+      } else {
+        // storeCode를 찾을 수 없는 경우 (daffiliation 테이블에 정보 없음)
+        print(
+          '>>> StoreProductCondition: 사용자 ID ($userId)에 연결된 대리점 코드를 찾을 수 없습니다.',
+        ); // 로깅
+        Get.snackbar(
+          '오류',
+          '소속 대리점 정보를 찾을 수 없습니다. 관리자에게 문의하세요.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print(
+        '>>> StoreProductCondition: 대리점 코드 가져오는 중 오류 발생: ${e.toString()}',
+      ); // 로깅
+      setState(() {
+        _loggedInStoreCode = null; // 오류 시 storeCode 초기화
+        _isLoadingStoreCode = false; // storeCode 로딩 완료 (오류)
+      });
+      Get.snackbar(
+        '오류',
+        '대리점 정보를 가져오는데 실패했습니다: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   // 로그인한 대리점의 픽업 대기 주문 목록을 가져오는 메서드
+  // 메서드 인자에서 storeCode 제거하고 상태 변수 _loggedInStoreCode 사용
   void _fetchPickupOrders({String? searchQuery}) async {
     // 검색어 인자 추가
-    // TODO: 실제 로그인된 대리점 코드를 사용하도록 수정해야 합니다.
+    // storeCode 상태 변수 유효성 다시 확인
+    if (_loggedInStoreCode == null) {
+      print(
+        '>>> _fetchPickupOrders: _loggedInStoreCode 상태 변수가 null입니다. 데이터 로딩 중단.',
+      );
+      setState(() {
+        allPickupOrders = [];
+        filteredPickupOrders = [];
+      });
+      return; // 함수 종료
+    }
+
     try {
       // DatabaseHandler에서 'Ready for Pickup' 주문 목록 가져오기 (검색어 포함 호출)
-      // DatabaseHandler는 Map 리스트를 반환합니다.
-      // DatabaseHandler의 쿼리가 purchaseId 검색 시 int로 변환함을 반영합니다.
       final fetchedOrdersMaps = await DatabaseHandler()
           .getPickupReadyOrdersByStore(
-            loggedInStoreCode,
+            _loggedInStoreCode!,
             searchQuery: searchQuery,
-          );
+          ); // _loggedInStoreCode 상태 변수 사용
 
       // Map 리스트를 PickupOrderState 객체 리스트로 변환
       final fetchedOrdersState =
           fetchedOrdersMaps.map((orderMap) {
-            // Map에서 가져온 현재 상태 (컬럼 이름 케이스 반영)
             final status =
                 orderMap['purchaseDeliveryStatus']?.toString() ?? 'Unknown';
             return PickupOrderState(
@@ -101,52 +174,45 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
           }).toList();
 
       setState(() {
-        // 검색어가 없는 경우에만 allPickupOrders 업데이트 (전체 데이터 필요 시)
-        // 현재 로직은 검색 시에도 fetchOrdersByStore를 호출하므로 allPickupOrders는 항상 Ready for Pickup 상태 데이터만 가짐.
-        // 검색 결과는 filteredPickupOrders에만 적용
-        allPickupOrders = fetchedOrdersState; // 검색 결과도 일단 전체 목록으로 저장 (변경사항 추적용)
+        allPickupOrders = fetchedOrdersState; // 가져온 목록 업데이트
         filteredPickupOrders = List.from(allPickupOrders); // 필터링된 목록 표시
       });
     } catch (e) {
       // 에러 처리 로직 추가
-      print('픽업 대기 주문 목록 가져오는 중 오류 발생: $e');
+      print('픽업 대기 주문 목록 가져오는 중 오류 발생: ${e.toString()}');
       setState(() {
         allPickupOrders = []; // 오류 발생 시 전체 목록 초기화
         filteredPickupOrders = []; // 오류 발생 시 필터링된 목록 초기화
       });
-      // TODO: 사용자에게 오류 발생 알림 (예: SnackBar)
       Get.snackbar(
         '오류',
-        '픽업 대기 주문 목록을 가져오는데 실패했습니다.',
+        '픽업 대기 주문 목록을 가져오는데 실패했습니다: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
   }
 
-  // 검색어에 따라 목록을 필터링하는 메서드 (이제는 단순히 _fetchPickupOrders 호출)
+  // 검색어에 따라 목록을 필터링하는 메서드
   void _filterOrders() {
-    final query = _searchController.text.trim(); // 검색어 가져오기
+    final query = _searchController.text.trim();
 
-    // 검색어 입력이 멈췄을 때 또는 검색 버튼을 눌렀을 때만 검색 실행 고려 가능
-    // 현재는 입력될 때마다 실행 (성능 고려 필요)
-    _fetchPickupOrders(searchQuery: query); // 검색어를 인자로 전달하여 데이터 다시 가져오기
+    // storeCode 로딩 완료된 경우에만 필터링 실행
+    if (_loggedInStoreCode != null) {
+      _fetchPickupOrders(searchQuery: query); // 검색어를 인자로 전달하여 데이터 다시 가져오기
+    } else {
+      print('>>> _filterOrders: _loggedInStoreCode가 null이라 필터링 건너뜀.');
+    }
   }
 
   // 변경 사항을 데이터베이스에 저장하는 메서드
   void _saveChanges() async {
-    // allPickupOrders 목록 전체를 순회하며 상태가 변경된 항목 찾기
     List<PickupOrderState> changedOrders =
         allPickupOrders
-            .where(
-              (item) =>
-                  item.currentStatus !=
-                  item.originalStatus, // 현재 상태가 원본 상태와 다른 항목
-            )
+            .where((item) => item.currentStatus != item.originalStatus)
             .toList();
 
     if (changedOrders.isEmpty) {
-      // 변경 사항이 없으면 사용자에게 알림
       print('변경할 내용이 없습니다.');
       Get.snackbar(
         '알림',
@@ -157,21 +223,17 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
       return;
     }
 
-    // 변경된 각 주문의 상태를 데이터베이스에 업데이트
     try {
       for (var order in changedOrders) {
-        // purchaseId는 이제 Map에서 int? 타입으로 가져옴
         final int? purchaseId = order.orderData['purchaseId'] as int?;
         if (purchaseId != null) {
-          await DatabaseHandler().updatePurchaseDeliveryStatus1(
-            purchaseId, // 주문 번호 (int)
-            order.currentStatus, // 변경된 새로운 상태 값
+          await DatabaseHandler().updatePurchaseDeliveryStatus(
+            purchaseId.toString(),
+            order.currentStatus,
           );
-          // 업데이트 성공 시 해당 항목의 originalStatus를 currentStatus로 업데이트
-          order.originalStatus = order.currentStatus; // 로컬 상태 업데이트
+          order.originalStatus = order.currentStatus;
         }
       }
-      // 모든 변경 사항 저장 성공 후 사용자에게 알림
       print('변경 사항이 성공적으로 저장되었습니다.');
       Get.snackbar(
         '성공',
@@ -179,25 +241,41 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-      // 저장 성공 후 목록을 새로고침하여 'Ready for Pickup'이 아닌 항목 제거
-      _fetchPickupOrders(); // 전체 목록 (Ready for Pickup 상태만 가져옴) 새로고침
+      _fetchPickupOrders();
     } catch (e) {
-      // 변경 사항 저장 중 오류 발생 시 알림
-      print('변경 사항 저장 중 오류 발생: $e');
+      print('변경 사항 저장 중 오류 발생: ${e.toString()}');
       Get.snackbar(
         '오류',
         '변경 사항 저장 중 오류가 발생했습니다: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
-      // TODO: 저장 실패 시 원래 상태로 되돌리는 로직 고려 (선택 사항)
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
+    // GetX 사용을 위해 context 대신 build(context) 사용
+    // storeCode 로딩 중이거나 로딩 실패 시 로딩 인디케이터 또는 오류 메시지 표시
+    if (_isLoadingStoreCode) {
+      return Scaffold(
+        appBar: AppBar(title: Text('픽업 대기 정보 로딩 중...')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    } else if (_loggedInStoreCode == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text('픽업 대기 목록 오류')),
+        body: Center(
+          child: Text(
+            '대리점 정보를 가져오는데 실패했습니다.',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text('픽업 대기 목록')),
+      appBar: AppBar(title: Text('픽업 대기 목록')), // 제목 (필요하다면 대리점 이름 추가)
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -208,14 +286,6 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
               // CustomTextField 사용
               label: '주문 번호 검색', // label 사용
               controller: _searchController,
-              // prefixIcon: Icon(Icons.search), // CustomTextField에 prefixIcon 기능이 있다면 사용
-              // decoration: InputDecoration( // CustomTextField 내부에서 Decoration 처리
-              //   hintText: '주문 번호 검색',
-              //   prefixIcon: Icon(Icons.search),
-              //   border: OutlineInputBorder(
-              //     borderRadius: BorderRadius.circular(8.0),
-              //   ),
-              // ),
             ),
             SizedBox(height: 16),
             // 픽업 대기 목록 표시 영역
@@ -316,112 +386,129 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
                     // 픽업 대기 목록 표시
                     Expanded(
                       // Column 내에서 ListView가 남은 공간을 차지하도록 Expanded 사용
-                      child: ListView.builder(
-                        itemCount: filteredPickupOrders.length, // 필터링된 목록 사용
-                        itemBuilder: (context, index) {
-                          final orderState =
-                              filteredPickupOrders[index]; // PickupOrderState 객체
-                          final orderData = orderState.orderData; // 원본 Map 데이터
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4.0,
-                              horizontal: 8.0,
-                            ), // 목록 항목 패딩 조정
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Map 키 이름은 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    orderData['customerName'] ?? '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // customerName 케이스 반영
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    orderData['purchaseId']?.toString() ?? '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // purchaseId (int) toString()
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    orderData['oproductCode'] ?? '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // oproductCode 케이스 반영
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    orderData['productsColor'] ?? '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // productsColor 케이스 반영
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    orderData['productsSize']?.toString() ?? '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // productsSize 케이스 반영
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    orderData['purchaseQuanity']?.toString() ??
-                                        '',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ), // purchaseQuanity 케이스 반영
-                                // 수령 상태 변경 DropdownButton
-                                Expanded(
-                                  flex: 2, // 상태 변경 컬럼에 할당할 공간 비율 조정
-                                  child: DropdownButton<String>(
-                                    // TODO: dropdownButtonStyle을 적절히 설정하여 공간 활용도를 높이거나 디자인 조정
-                                    isExpanded: true, // 가로 공간 최대한 사용
-                                    value:
-                                        orderState.currentStatus, // 현재 선택된 상태 값
-                                    items:
-                                        _deliveryStatuses.map((String status) {
-                                          return DropdownMenuItem<String>(
-                                            value: status,
-                                            child: Text(
-                                              status,
-                                              style: TextStyle(fontSize: 12),
-                                            ), // 드롭다운 항목 글씨 크기 조정
-                                          );
-                                        }).toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          // 해당 항목의 currentStatus 업데이트
-                                          orderState.currentStatus = newValue;
-                                        });
-                                      }
-                                    },
+                      child:
+                          filteredPickupOrders.isEmpty
+                              ? Center(
+                                child: Text(
+                                  _searchController.text.isEmpty
+                                      ? '픽업 대기 중인 제품이 없습니다.'
+                                      : '검색 결과가 없습니다.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
                                   ),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                              )
+                              : ListView.builder(
+                                itemCount:
+                                    filteredPickupOrders.length, // 필터링된 목록 사용
+                                itemBuilder: (context, index) {
+                                  final orderState =
+                                      filteredPickupOrders[index]; // PickupOrderState 객체
+                                  final orderData =
+                                      orderState.orderData; // 원본 Map 데이터
+
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                      horizontal: 8.0,
+                                    ), // 목록 항목 패딩 조정
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Map 키 이름은 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            orderData['customerName'] ?? '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // customerName 케이스 반영
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            orderData['purchaseId']
+                                                    ?.toString() ??
+                                                '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // purchaseId (int) toString()
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            orderData['oproductCode'] ?? '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // oproductCode 케이스 반영
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text(
+                                            orderData['productsColor'] ?? '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // productsColor 케이스 반영
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text(
+                                            orderData['productsSize']
+                                                    ?.toString() ??
+                                                '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // productsSize 케이스 반영
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text(
+                                            orderData['purchaseQuanity']
+                                                    ?.toString() ??
+                                                '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ), // purchaseQuanity 케이스 반영
+                                        // 수령 상태 변경 DropdownButton
+                                        Expanded(
+                                          flex: 2, // 상태 변경 컬럼에 할당할 공간 비율 조정
+                                          child: DropdownButton<String>(
+                                            // TODO: dropdownButtonStyle을 적절히 설정하여 공간 활용도를 높이거나 디자인 조정
+                                            isExpanded: true, // 가로 공간 최대한 사용
+                                            value:
+                                                orderState
+                                                    .currentStatus, // 현재 선택된 상태 값
+                                            items:
+                                                _deliveryStatuses.map((
+                                                  String status,
+                                                ) {
+                                                  return DropdownMenuItem<
+                                                    String
+                                                  >(
+                                                    value: status,
+                                                    child: Text(
+                                                      status,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                    ), // 드롭다운 항목 글씨 크기 조정
+                                                  );
+                                                }).toList(),
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) {
+                                                setState(() {
+                                                  // 해당 항목의 currentStatus 업데이트
+                                                  orderState.currentStatus =
+                                                      newValue;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                     ),
-                    if (filteredPickupOrders.isEmpty) // 필터링 결과 데이터가 없을 때 메시지 표시
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Text(
-                            _searchController.text.isEmpty
-                                ? '픽업 대기 중인 제품이 없습니다.'
-                                : '검색 결과가 없습니다.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),

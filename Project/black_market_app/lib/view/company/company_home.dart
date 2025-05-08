@@ -2,7 +2,10 @@ import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/view/company/company_check_inventory.dart';
 import 'package:black_market_app/view/company/company_post_list.dart';
 import 'package:black_market_app/view/company/company_product_list.dart';
+import 'package:black_market_app/view/company/company_purchase_list.dart';
 import 'package:black_market_app/view/company/company_return_list.dart';
+import 'package:black_market_app/view/company/create/company_create_account.dart';
+import 'package:black_market_app/view/company/create/company_create_announcement.dart';
 import 'package:black_market_app/view/company/order/company_order_list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,11 +24,7 @@ class _CompanyHomeState extends State<CompanyHome> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text("관리자 페이지",
-        style: TextStyle(
-          color: Colors.white,
-        ),
-        ),
+        title: Text("관리자 페이지", style: TextStyle(color: Colors.white)),
       ),
       body: Center(
         child: SizedBox(
@@ -40,11 +39,12 @@ class _CompanyHomeState extends State<CompanyHome> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text("---------재고 관리---------",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      child: Text(
+                        "---------재고 관리---------",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Row(
@@ -56,10 +56,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text:" 재고 확인 ", 
-                              onPressed:(){
+                              text: " 재고 확인 ",
+                              onPressed: () {
                                 Get.to(CompanyCheckInventory());
-                              }),
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -68,20 +69,21 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text: "재고 입출고", 
-                              onPressed:(){
-                                
-                              }),
+                              text: "재고 입출고",
+                              onPressed: () {},
+                            ),
                           ),
                         ),
-                    ],),
+                      ],
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text("---------제품 관리---------",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      child: Text(
+                        "---------제품 관리---------",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Row(
@@ -93,10 +95,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text:" 제품 관리 ", 
-                              onPressed:(){
+                              text: " 제품 관리 ",
+                              onPressed: () {
                                 Get.to(CompanyProductList());
-                              }),
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -105,20 +108,23 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text: "제품 게시글 작성", 
-                              onPressed:(){
+                              text: "제품 게시글 작성",
+                              onPressed: () {
                                 Get.to(CompanyPostList());
-                              }),
+                              },
+                            ),
                           ),
                         ),
-                    ],),
+                      ],
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text("---------회원 관리---------",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      child: Text(
+                        "---------회원 관리---------",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Row(
@@ -130,10 +136,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text:" 반품 확인 ", 
-                              onPressed:(){
+                              text: " 반품 확인 ",
+                              onPressed: () {
                                 Get.to(CompanyReturnList());
-                              }),
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -142,20 +149,23 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text: " 구매 내역 ", 
-                              onPressed:(){
-                            
-                              }),
+                              text: " 구매 내역 ",
+                              onPressed: () {
+                                Get.to(CompanyPurchaseList());
+                              },
+                            ),
                           ),
                         ),
-                    ],),
+                      ],
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text("---------서류 관리---------",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      child: Text(
+                        "---------서류 관리---------",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Row(
@@ -167,10 +177,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text:" 공지 작성 ", 
-                              onPressed:(){
-                            
-                              }),
+                              text: " 공지 작성 ",
+                              onPressed: () {
+                                Get.to(CompanyCreateAnnouncement());
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -179,13 +190,15 @@ class _CompanyHomeState extends State<CompanyHome> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: CustomButton(
-                              text: " 결재 내역 ", 
-                              onPressed:(){
+                              text: " 결재 내역 ",
+                              onPressed: () {
                                 Get.to(CompanyOrderList());
-                              }),
+                              },
+                            ),
                           ),
                         ),
-                    ],),
+                      ],
+                    ),
                   ],
                 ),
                 Padding(
@@ -195,22 +208,23 @@ class _CompanyHomeState extends State<CompanyHome> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text("대리점 직원 등록"),
-                         SizedBox(
-                            height: 80,
-                            width: 180,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: CustomButton(
-                                text: " 회원 등록 ", 
-                                onPressed:(){
-                              
-                                }),
+                        SizedBox(
+                          height: 80,
+                          width: 180,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: CustomButton(
+                              text: " 회원 등록 ",
+                              onPressed: () {
+                                Get.to(CompanyCreateAccount());
+                              },
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),

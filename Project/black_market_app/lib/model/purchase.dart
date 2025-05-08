@@ -22,10 +22,10 @@ class Purchase {
   });
   factory Purchase.formMap(Map<String, dynamic> res) {
     return Purchase(
-      purchaseId: res['PurchaseId'],
-      purchaseDate: res['PurchaseDate'],
-      purchaseQuanity: res['PurchaseQuanity'],
-      purchaseCardId: res['PurchaseCardId'],
+      purchaseId: res['purchaseId'],
+      purchaseDate: res['purchaseDate'],
+      purchaseQuanity: res['purchaseQuanity'],
+      purchaseCardId: res['purchaseCardId'],
       pUserId: res['pUserId'],
       pStoreCode: res['pStoreCode'],
       purchaseDeliveryStatus: res['purchaseDeliveryStatus'],
