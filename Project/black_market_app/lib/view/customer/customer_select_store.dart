@@ -180,7 +180,6 @@ class _UserMapState extends State<CustomerSelectStore> {
       onCancel: () => Get.back(),
       confirmText: '선택하기',
       onConfirm: () {
-        Get.back();
         Get.back(result: storeCode);
       },
     );

@@ -52,11 +52,20 @@ class _CustomerPurchaseListState extends State<CustomerPurchaseList> {
                   onTap: () => Get.to(CustomerPurchaseDetail(), arguments: item['purchaseId']),
                   child: Card(
                     child: Row(
+                      
                       children: [
-                        Text("주문 번호 : ${item['purchaseId']}"),
-                        Text("제품 명 : ${item['productsName']}"),
-                        Text("구매 총 가격 : ${item['purchasePrice']}"),
-                        Text("배송 상태  : ${item['purchaseDeliveryStatus']}"),
+                        Text("주문번호 : ${item['purchaseId']}"),
+                        Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("제품명 : ${item['productsName']}"),
+                              Text("구매 총 가격 : ${item['purchasePrice']}"),
+                            ],
+                          ),
+                        ),
+                        Text("배송상태  : ${item['purchaseDeliveryStatus']}"),
                       ],
                     ),
                   ),

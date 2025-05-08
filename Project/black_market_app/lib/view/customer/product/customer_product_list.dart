@@ -1,4 +1,3 @@
-// 제품 리스트
 import 'package:black_market_app/view/customer/customer_announcement.dart';
 import 'package:black_market_app/view/customer/product/customer_product_detail.dart';
 import 'package:black_market_app/view/customer/purchase/customer_purchase_list.dart';
@@ -19,17 +18,23 @@ class _CustomerProductListState extends State<CustomerProductList> {
   late DatabaseHandler handler;
   final box = GetStorage();
   late String uid;
-  late int memberType;
+
+  final TextEditingController searchCon = TextEditingController();
+  String searchKeyword = '';
+
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler();
-    initStorage();
+    uid = box.read('uid') ?? '';
   }
-  initStorage(){
-    uid = box.read('uid');
-    memberType = box.read('memberType');
-    setState(() {});
+
+  Future<List<dynamic>> fetchData() {
+    if (searchKeyword.isEmpty) {
+      return handler.queryGroupedProducts();
+    } else {
+      return handler.queryUserPurchaseListWithTitle(searchKeyword);
+    }
   }
 
   @override
@@ -41,7 +46,7 @@ class _CustomerProductListState extends State<CustomerProductList> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: () => Get.to(CustomerShoppingCartList()),
+            onPressed: () => Get.to(const CustomerShoppingCartList()),
             icon: Icon(Icons.shopping_cart),
           ),
         ],
@@ -53,57 +58,128 @@ class _CustomerProductListState extends State<CustomerProductList> {
             UserAccountsDrawerHeader(
               accountName: Text(uid),
               accountEmail: Text(''),
-              decoration: BoxDecoration(color: Colors.black),
+              decoration: const BoxDecoration(color: Colors.black),
             ),
             ListTile(
-              leading: Icon(Icons.money),
-              title: Text('결재 내역'),
-              onTap: () => Get.to(CustomerPurchaseList()),
+              leading: const Icon(Icons.money),
+              title: const Text('결제 내역'),
+              onTap: () => Get.to(const CustomerPurchaseList()),
             ),
             ListTile(
-              leading: Icon(Icons.money),
-              title: Text('공지사항'),
-              onTap: () => Get.to(CustomerAnnouncement()),
+              leading: const Icon(Icons.announcement),
+              title: const Text('공지사항'),
+              onTap: () => Get.to(const CustomerAnnouncement()),
             ),
           ],
         ),
       ),
-      body: FutureBuilder(
-        future: handler.queryGroupedProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: snapshot.data?.length,
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Get.to(
-                      CustomerProductDetail(),
-                      arguments: snapshot.data![index].productsName,
-                    );
-                  },
-                  child: Card(
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Image.memory(snapshot.data![index].productsImage,
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover),
-                        ),
-                        Text('제품명 : ${snapshot.data![index].productsName}',),
-                        
-                      ],
+      body: Column(
+        children: [
+          // 🔍 검색창
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchCon,
+                    decoration: const InputDecoration(
+                      hintText: '상품명을 입력하세요',
+                      border: OutlineInputBorder(),
                     ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      searchKeyword = searchCon.text.trim();
+                    });
+                  },
+                  child: const Text('검색'),
+                ),
+              ],
+            ),
+          ),
+          // 📦 상품 그리드
+          Expanded(
+            child: FutureBuilder(
+              future: fetchData(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('오류 발생: ${snapshot.error}'));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('등록된 상품이 없습니다.'));
+                }
+
+                final products = snapshot.data!;
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(10),
+                  itemCount: products.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = products[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Get.to(const CustomerProductDetail(), arguments: item.ptitle);
+                      },
+                      child: Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                child: Image.memory(
+                                  item.introductionPhoto,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    item.ptitle,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  Text(
+                                    '${item.productsPrice}원',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    '색상: ${item.productsColor}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
-            );
-          } else {
-            return Center(child: CircularProgressIndicator());
-          }
-        },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,7 +10,7 @@ class CustomerShoppingCartList extends StatefulWidget {
 
   @override
   State<CustomerShoppingCartList> createState() =>
-    _CustomerShoppingCartListState();
+      _CustomerShoppingCartListState();
 }
 
 class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
@@ -25,11 +25,13 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
     handler = DatabaseHandler();
     initStorage();
   }
-  initStorage(){
+
+  initStorage() {
     uid = box.read('uid');
-    isReady = true; 
+    isReady = true;
     setState(() {});
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,23 +41,19 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder(
-        future: handler.queryShoppingCart(uid), 
-        builder:(context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
-    }
+        future: handler.queryShoppingCart(uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    if (snapshot.hasError) {
-      return Center(
-        child: Text('오류 발생: ${snapshot.error}'),
-      );
-    }
+          if (snapshot.hasError) {
+            return Center(child: Text('오류 발생: ${snapshot.error}'));
+          }
 
-    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-      return const Center(
-        child: Text('장바구니가 비어 있습니다.'),
-      );
-    }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('장바구니가 비어 있습니다.'));
+          }
           if (snapshot.hasData) {
             return ListView.builder(
               itemCount: snapshot.data!.length,
@@ -63,63 +61,77 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
                 return GestureDetector(
                   onTap: () {
                     creditDialogue(
-                      snapshot.data![index].productsName, 
-                      snapshot.data![index].purchaseQuantity, 
-                      snapshot.data![index].purchasePrice, 
-                      snapshot.data![index].storeName, 
+                      snapshot.data![index].productsName,
+                      snapshot.data![index].purchaseQuantity,
+                      snapshot.data![index].purchasePrice,
+                      snapshot.data![index].storeName,
                       snapshot.data![index].purchaseId,
                     );
                   },
                   child: Card(
                     child: Row(
                       children: [
-                        Image.memory(snapshot.data![index].productsImage,
-                        width: 80,
-                        height: 80,
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Image.memory(
+                            snapshot.data![index].productsImage,
+                            width: 80,
+                            height: 80,
+                          ),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('제품 명 : ${snapshot.data![index].productsName}'),
-                            Text('수량 : ${snapshot.data![index].purchaseQuantity}'),
+                            Text(
+                              '제품명 : ${snapshot.data![index].productsName}',
+                            ),
+                            Text(
+                              '수량    : ${snapshot.data![index].purchaseQuantity} 개',
+                            ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
                 );
               },
             );
-          }else {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
+          } else {
+            return Center(child: CircularProgressIndicator());
           }
         },
       ),
     );
-  }// build
-  creditDialogue(String productName, int quantity, int price, String storeName, int purchaseId){
+  } // build
+
+  creditDialogue(
+    String productName,
+    int quantity,
+    int price,
+    String storeName,
+    int purchaseId,
+  ) {
     CustomDialogue().showDialogue(
-      title: '구매 진행', 
-      middleText: 
-      '''
+      title: '구매 진행',
+      middleText: '''
       선택하신 상품은 $productName 이며
-      $quantity 개, 가격은 $price 입니다.
+      $quantity 개, 가격은 $price 원 입니다.
       픽업 장소 : $storeName 으로 주문 하시겠습니까? 
       ''',
       cancelText: '취소',
       onCancel: () => Get.back(),
       confirmText: '구매요청',
-      onConfirm: () async{
+      onConfirm: () async {
         await addPurchaseList(purchaseId);
         Get.back();
       },
     );
   }
-// ----------------------------------- //
-addPurchaseList(int purchaseId)async{
-await handler.updatePurchaseList(purchaseId, '주문완료');
-}
-// ----------------------------------- //
-}// class
+
+  // ----------------------------------- //
+  addPurchaseList(int purchaseId) async {
+    await handler.updatePurchaseList(purchaseId, '주문완료');
+  }
+
+  // ----------------------------------- //
+} // class

@@ -5,7 +5,7 @@ class CreateNotice {
   final String cajobGradeCode; // 직급 코드
   final String title; // 제목
   final String content; // 내용
-  final DateTime date; // 날짜
+  final String date; // 날짜
   final Uint8List photo; // 사진
   
   CreateNotice(

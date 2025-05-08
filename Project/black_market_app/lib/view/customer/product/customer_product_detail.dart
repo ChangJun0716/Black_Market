@@ -1,5 +1,6 @@
 // 제품 상세
 import 'package:black_market_app/message/custom_snackbar.dart';
+import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/model/purchase.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
@@ -25,13 +26,16 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
   int? selectedSize;
   late TextEditingController quantityCon;
   late DateTime now;
-  late int selectedStore;
+  late String selectedStore;
   bool isReady = false;
+  late Map args;
+late ProductRegistration product;
 
-  @override
-  void initState() {
-    super.initState();
-    if (Get.arguments == null) {
+@override
+void initState() {
+  super.initState();
+  final ptitle = Get.arguments;
+  if (ptitle == null) {
     CustomSnackbar().showSnackbar(
       title: '에러',
       message: '제품명이 전달되지 않았습니다.',
@@ -41,14 +45,30 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
     Get.back();
     return;
   }
-    productsName = Get.arguments ?? '__';
-    uid = '';
-    handler = DatabaseHandler();
-    quantityCon = TextEditingController();
-    now = DateTime.now();
-    selectedStore = 0;
-    initStorage();
-  }
+
+  handler = DatabaseHandler();
+  quantityCon = TextEditingController();
+  now = DateTime.now();
+  selectedStore = '';
+
+  
+  handler.findProductNameByTitle(ptitle).then((name) {
+    if (name == null) {
+      CustomSnackbar().showSnackbar(
+        title: '에러',
+        message: '해당 제품을 찾을 수 없습니다.',
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      Get.back();
+    } else {
+      productsName = name;
+      uid = box.read('uid') ?? '';
+      isReady = true;
+      setState(() {});
+    }
+  });
+}
 
   // ------- functions ------- //
   initStorage() async {
@@ -60,7 +80,10 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('제품 상세')),
+      appBar: AppBar(title: Text('제품 상세'),
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      ),
       body:
           isReady
               ? FutureBuilder<List<Map<String, dynamic>>>(
@@ -107,41 +130,27 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
                       children: [
                         if (selected['productsImage'] != null)
                           Image.memory(selected['productsImage']),
-                        Text(selected['productsName']),
-                        Text("가격: ${selected['productsPrice']}원"),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            DropdownButton<String>(
-                              value: selectedColor,
-                              items:
-                                  colors
-                                      .map(
-                                        (e) => DropdownMenuItem(
-                                          value: e,
-                                          child: Text(e),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged:
-                                  (val) => setState(() => selectedColor = val),
-                            ),
-                            SizedBox(width: 10),
-                            DropdownButton<int>(
-                              value: selectedSize,
-                              items:
-                                  sizes
-                                      .map(
-                                        (e) => DropdownMenuItem(
-                                          value: e,
-                                          child: Text(e.toString()),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged:
-                                  (val) => setState(() => selectedSize = val),
-                            ),
-                          ],
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text('제품명: ${selected['productsName']}'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text("가격: ${selected['productsPrice']}원"),
+                        ),
+                        DropdownButton<int>(
+                          value: selectedSize,
+                          items:
+                              sizes
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e.toString()),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (val) => setState(() => selectedSize = val),
                         ),
                         if (selected['introductionPhoto'] != null)
                           Image.memory(selected['introductionPhoto']),
@@ -174,7 +183,7 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
                         CustomButton(
                           text: '장바구니 담기',
                           onPressed: () async {
-                            if (selectedStore == 0 ||
+                            if (selectedStore == '' ||
                                 quantityCon.text.trim().isEmpty) {
                               CustomSnackbar().showSnackbar(
                                 title: '오류',
@@ -187,15 +196,17 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
                                 Purchase(
                                   purchaseDate: now.toString(),
                                   purchaseQuanity: int.parse(quantityCon.text),
+                                  purchaseCardId: 1,
                                   pUserId: uid,
-                                  pStoreCode: selectedStore.toString(),
+                                  pStoreCode: selectedStore,
                                   purchaseDeliveryStatus: '장바구니',
-                                  oproductCode: selected['oproductCode'],
+                                  oproductCode: selected['productsCode'].toString(),
                                   purchasePrice:
-                                      selected['purchasePrice'] *
-                                      int.parse(quantityCon.text),
+                                      selected['productsPrice'] *int.parse(quantityCon.text),
                                 ),
                               );
+                              Get.back();
+                              CustomSnackbar().showSnackbar(title: '장바구니 담기 성공', message: '해당 상품이 장바구니에 추가되었습니다.', backgroundColor: Colors.black, textColor: Colors.white);
                             }
                           },
                         ),

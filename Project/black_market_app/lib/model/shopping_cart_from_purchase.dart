@@ -19,12 +19,12 @@ class ShoppingCart {
 
   factory ShoppingCart.fromMap(Map<String, dynamic> map) {
     return ShoppingCart(
-      purchaseId: map['purchaseId'],
-      productsName: map['productsName'],
-      productsImage: map['productsImage'] as Uint8List,
-      purchaseQuantity: map['purchaseQuantity'],
-      purchasePrice: map['purchasePrice'],
-      storeName: map['storeName'],
+      purchaseId: map['purchaseId'] ?? 0, // null이면 0 대입
+      productsName: map['productsName'] ?? '',
+      productsImage: map['productsImage'], // Uint8List라면 null이 아님을 보장
+      purchaseQuantity: map['purchaseQuanity'] ?? 0,
+      purchasePrice: map['purchasePrice'] ?? 0,
+      storeName: map['storeName'] ?? '',
     );
   }
 }

@@ -12,6 +12,7 @@ class ProductRegistration {
   final Uint8List introductionPhoto; // 대표 사진
   final String ptitle; // 제목
   final List<PostBlock> contentBlocks; // 본문 (텍스트 + 이미지 섞임)
+  
 
   ProductRegistration({
     required this.paUserid,
@@ -19,6 +20,7 @@ class ProductRegistration {
     required this.introductionPhoto,
     required this.ptitle,
     required this.contentBlocks,
+    
   });
 
   Map<String, dynamic> toMap() => {

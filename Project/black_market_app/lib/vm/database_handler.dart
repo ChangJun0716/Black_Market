@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:black_market_app/model/create_notice.dart';
+import 'package:black_market_app/model/grouped_products.dart';
 import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/purchase.dart';
+import 'package:black_market_app/model/purchase_detail.dart';
 import 'package:black_market_app/model/return_investigation.dart';
 import 'package:black_market_app/model/shopping_cart_from_purchase.dart';
 import 'package:black_market_app/model/stock_receipts.dart';
@@ -73,7 +75,7 @@ class DatabaseHandler {
 
         // Table: purchase (match with Purchase model)
         await db.execute(
-          "CREATE TABLE purchase(purchaseId TEXT PRIMARY KEY, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode TEXT, purchasePrice INTEGER, pUserId TEXT)",
+          "CREATE TABLE purchase(purchaseId integer PRIMARY KEY autoincrement, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode integer, purchasePrice INTEGER, pUserId TEXT)",
         );
 
         // Table: returnInvestigation (match with ReturnInvestigation model)
@@ -701,20 +703,46 @@ class DatabaseHandler {
 
   // ------------------Product----------------------- //
   // customer_product_list.dart : product list (query)
-  Future<List<Products>> queryGroupedProducts() async {
-    final Database db = await initializeDB();
-    final List<Map<String, Object?>> queryResult = await db.rawQuery('''
-    SELECT * FROM products 
-    WHERE productsCode IN (
-      SELECT MIN(productsCode)
-      FROM products
-      GROUP BY productsName
-    )
-    ORDER BY productsName
+Future<List<GroupedProduct>> queryGroupedProducts() async {
+  final db = await initializeDB();
+  final result = await db.rawQuery('''
+    SELECT 
+      p.productsCode AS pProductCode,
+      p.productsName,
+      p.productsPrice,
+      p.productsColor,
+      pr.ptitle,
+      pr.introductionPhoto
+    FROM products p
+    JOIN productRegistration pr ON p.productsCode = pr.pProductCode
+    WHERE p.productsCode IN (
+        SELECT MIN(productsCode)
+        FROM products
+        GROUP BY productsName
+      )
+    ORDER BY p.productsName;
   ''');
-    return queryResult.map((e) => Products.fromMap(e)).toList();
-  }
 
+  return result.map((e) => GroupedProduct.fromMap(e)).toList();
+}
+
+
+  // ------------------------------------------------ //
+Future<String?> findProductNameByTitle(String ptitle) async {
+  final db = await initializeDB();
+  final result = await db.rawQuery('''
+    SELECT p.productsName
+    FROM products p
+    JOIN productRegistration r ON p.productsCode = r.pProductCode
+    WHERE r.ptitle = ?
+    LIMIT 1
+  ''', [ptitle]);
+
+  if (result.isNotEmpty) {
+    return result.first['productsName'].toString();
+  }
+  return null;
+}
   // ------------------------------------------------ //
   Future<List<Map<String, dynamic>>> queryProductDetails(
     String productName,
@@ -747,15 +775,16 @@ class DatabaseHandler {
     int result = 0;
     final Database db = await initializeDB();
     result = await db.rawInsert(
-      "insert into purchase(pStoreCode,  oproductCode, purchaseQuantity, purchaseDate, purchasePrice, purchaseDeliverystatus, purchaseCartId) values (?,?,?,?,?,?)",
+      "insert into purchase(pUserId, pStoreCode, purchaseCardId, oproductCode, purchaseQuanity, purchaseDate, purchasePrice, purchaseDeliveryStatus) values (?,?,?,?,?,?,?,?)",
       [
+        purchase.pUserId,
         purchase.pStoreCode,
+        purchase.purchaseCardId,
         purchase.oproductCode,
         purchase.purchaseQuanity,
         purchase.purchaseDate,
         purchase.purchasePrice,
         purchase.purchaseDeliveryStatus,
-        purchase.purchaseCardId,
       ],
     );
     return result;
@@ -1266,6 +1295,57 @@ Future<List<Map<String, dynamic>>> queryUserPurchaseList(String pUserId) async {
 
   return queryResult;
 }
+// ------------------------------ //
+// query announcement by title
+Future<List<CreateNotice>> queryAnnouncementByTitle(String title)async{
+  final Database db = await initializeDB();
+  final List<Map<String,Object?>> queryResult = await db.rawQuery(
+    "select * from createNotice where title = ?",
+    [title]
+  );
+  return queryResult.map((e) => CreateNotice.fromMap(e),).toList();
+}
+// ------------------------------ //
+Future<PurchaseDetail?> queryPurchaseDetail(int purchaseId) async {
+  final Database db = await initializeDB();
+
+  final result = await db.rawQuery('''
+    SELECT 
+      p.productsName,
+      p.productsColor,
+      p.productsSize,
+      p.productsImage,
+      pr.ptitle,
+      pu.purchasePrice,
+      pu.purchaseQuanity,
+      pu.purchaseDeliveryStatus,
+      s.storeName
+    FROM purchase pu
+    JOIN products p ON pu.oProductCode = p.productsCode
+    LEFT JOIN productRegistration pr ON p.productsCode = pr.pProductCode
+    JOIN store s ON pu.pStoreCode = s.storeCode
+    WHERE pu.purchaseId = ?
+  ''', [purchaseId]);
+
+  if (result.isNotEmpty) {
+    return PurchaseDetail.fromMap(result.first);
+  } else {
+    return null;
+  }
+}
+// ------------------------------ //
+Future<List<Map<String, dynamic>>> queryUserPurchaseListWithTitle(String keyword) async {
+  final Database db = await initializeDB();
+  return await db.rawQuery('''
+    SELECT pu.purchaseId, p.productsName, pu.purchasePrice, pu.purchaseDeliveryStatus
+    FROM purchase pu
+    JOIN products p ON pu.oProductCode = p.productsCode
+    LEFT JOIN productRegistration pr ON p.productsCode = pr.pProductCode
+    WHERE pr.ptitle LIKE ?
+    ORDER BY pu.purchaseDate DESC
+  ''', ['%$keyword%']);
+}
+
 // ------------------------------ //
 
 } // class
