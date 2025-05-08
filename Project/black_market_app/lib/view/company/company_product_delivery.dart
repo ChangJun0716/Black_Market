@@ -1,4 +1,4 @@
-// 출고 페이지: 변경된 쿼리 방식 적용 (UI에서 재고 계산 → DB에는 update만)
+// 출고 페이지
 
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';

@@ -1,23 +1,46 @@
-//제품
+//제품 게시글 
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:black_market_app/view/post/post_block.dart';
+
+
 class ProductRegistration {
-  final String paUserid; // 회원 pk
-  final String paJobGradeCode; // 직급 코드
+  final String paUserid; // 회원 pk 
   final String pProductCode; // 제품 코드
-  final Uint8List introductionPhoto; // 소개 사진
-  final String productDescription; // 제품 설명
+  final Uint8List introductionPhoto; // 대표 사진
+  final String ptitle; // 제목
+  final List<PostBlock> contentBlocks; // 본문 (텍스트 + 이미지 섞임)
+
   ProductRegistration({
     required this.paUserid,
-    required this.paJobGradeCode,
     required this.pProductCode,
     required this.introductionPhoto,
-    required this.productDescription,
+    required this.ptitle,
+    required this.contentBlocks,
   });
-  ProductRegistration.fromMap(Map<String, dynamic> res)
-    : paUserid = res['paUserid'],
-      paJobGradeCode = res['paJobGradeCode'],
-      pProductCode = res['pProductCode'],
-      introductionPhoto = res['introductionPhoto'],
-      productDescription = res['productDescription'];
+
+  Map<String, dynamic> toMap() => {
+        'paUserid': paUserid,
+        'pProductCode': pProductCode,
+        'introductionPhoto': introductionPhoto,
+        'ptitle': ptitle,
+        'contentJson': jsonEncode(contentBlocks.map((e) => e.toMap()).toList()),
+      };
+
+  factory ProductRegistration.fromMap(Map<String, dynamic> res) {
+    List<PostBlock> blocks = [];
+    if (res['contentJson'] != null) {
+      final List decoded = jsonDecode(res['contentJson']);
+      blocks = decoded.map((e) => PostBlock.fromMap(e)).toList();
+    }
+
+    return ProductRegistration(
+      paUserid: res['paUserid'],
+      pProductCode: res['pProductCode'],
+      introductionPhoto: res['introductionPhoto'],
+      ptitle: res['ptitle'],
+      contentBlocks: blocks,
+    );
+  }
 }
