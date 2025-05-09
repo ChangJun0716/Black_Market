@@ -42,6 +42,15 @@ class _LoginState extends State<Login> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Padding(
+                padding: const EdgeInsets.all(30.0),
+                child: Text('Black Market',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 35
+                ),
+                ),
+              ),
               // textField : id
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -100,6 +109,8 @@ class _LoginState extends State<Login> {
         saveStorage(memberType);
         Get.to(StoreHomePage());
       }
+      idCon.text = '';
+      pwCon.text = '';
     } else {
       // id,pw 일치하는 값이 없을 때
       CustomSnackbar().showSnackbar(
