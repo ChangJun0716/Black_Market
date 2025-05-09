@@ -128,8 +128,8 @@ void initState() {
                   return SingleChildScrollView(
                     child: Column(
                       children: [
-                        if (selected['productsImage'] != null)
-                          Image.memory(selected['productsImage']),
+                        if (representative['productsImage'] != null)
+                        Image.memory(representative['productsImage']),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text('제품명: ${selected['productsName']}'),
@@ -152,8 +152,8 @@ void initState() {
                           onChanged:
                               (val) => setState(() => selectedSize = val),
                         ),
-                        if (selected['introductionPhoto'] != null)
-                          Image.memory(selected['introductionPhoto']),
+                        if (representative['introductionPhoto'] != null)
+                        Image.memory(representative['introductionPhoto']),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

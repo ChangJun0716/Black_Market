@@ -22,17 +22,17 @@ class PurchaseDetail {
     required this.storeName,
   });
 
-  factory PurchaseDetail.fromMap(Map<String, dynamic> map) {
-    return PurchaseDetail(
-      productName: map['productsName'],
-      productColor: map['productsColor'],
-      productSize: map['productsSize'],
-      productImage: map['productsImage'],
-      ptitle: map['ptitle'],
-      purchasePrice: map['purchasePrice'],
-      purchaseQuantity: map['purchaseQuanity'],
-      purchaseDeliveryStatus: map['purchaseDeliveryStatus'],
-      storeName: map['storeName'],
-    );
-  }
+factory PurchaseDetail.fromMap(Map<String, dynamic> map) {
+  return PurchaseDetail(
+    productName: map['productsName'] as String,
+    productColor: map['productsColor'] as String,
+    productSize: map['productsSize'] as int,
+    productImage: map['productsImage'] as Uint8List,
+    ptitle: map['ptitle'] as String? ?? '',
+    purchasePrice: map['purchasePrice'] as int,
+    purchaseQuantity: map['purchaseQuanity'] as int,
+    purchaseDeliveryStatus: map['purchaseDeliveryStatus'] as String,
+    storeName: map['storeName'] as String,
+  );
+}
 }
