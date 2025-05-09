@@ -58,8 +58,15 @@ class _CompanyManagementListState extends State<CompanyManagementList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("입출고 관리"),
+        backgroundColor: Colors.black,
+        title: const Text("입출고 내역",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        ),
       ),
       body: Column(
         children: [
@@ -69,10 +76,19 @@ class _CompanyManagementListState extends State<CompanyManagementList> {
               children: [
                 // 입출고 드롭다운
                 DropdownButton<String>(
+                  dropdownColor: Colors.black,
                   value: selectedType,
                   items: const [
-                    DropdownMenuItem(value: '입고', child: Text('입고')),
-                    DropdownMenuItem(value: '출고', child: Text('출고')),
+                    DropdownMenuItem(value: '입고', child: Text('입고',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                    )),
+                    DropdownMenuItem(value: '출고', child: Text('출고',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                    )),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -87,16 +103,19 @@ class _CompanyManagementListState extends State<CompanyManagementList> {
                 const SizedBox(width: 16),
                 // 검색 입력창
                 Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: filterList,
-                    decoration: InputDecoration(
-                      hintText: selectedType == '입고' ? '작업자 ID 검색' : '대리점명 검색',
-                      border: OutlineInputBorder(),
-                      suffixIcon: const Icon(Icons.search),
-                    ),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: filterList,
+                  decoration: InputDecoration(
+                    hintText: selectedType == '입고' ? '작업자 ID 검색' : '대리점명 검색',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white, 
                   ),
                 ),
+              ),
+
               ],
             ),
           ),
@@ -127,3 +146,4 @@ class _CompanyManagementListState extends State<CompanyManagementList> {
     );
   }
 }
+
