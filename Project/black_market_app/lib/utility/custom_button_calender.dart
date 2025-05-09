@@ -29,7 +29,7 @@ class _CustomButtonCalenderState extends State<CustomButtonCalender> {
     final DateTime now = DateTime.now();
     final DateTime? result = await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? DateTime(2000),
+      initialDate: selectedDate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: now,
     );

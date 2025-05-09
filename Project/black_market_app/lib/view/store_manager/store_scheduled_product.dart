@@ -350,7 +350,9 @@ class _StoreScheduledProductState extends State<StoreScheduledProduct> {
                                         Expanded(
                                           flex: 2,
                                           child: Text(
-                                            productData['oproductCode'] ?? '',
+                                            productData['oproductCode']
+                                                    ?.toString() ??
+                                                '',
                                             style: TextStyle(fontSize: 12),
                                           ),
                                         ), // oproductCode 케이스 반영

@@ -231,7 +231,6 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
             purchaseId,
             order.currentStatus,
           );
-          order.originalStatus = order.currentStatus;
         }
       }
       print('변경 사항이 성공적으로 저장되었습니다.');

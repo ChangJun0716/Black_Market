@@ -19,6 +19,12 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      supportedLocales: const [
+        // 지원하는 언어 목록
+        Locale('ko', 'KR'), // 한국어
+        Locale('en', 'US'), // 영어 (기본적으로 많이 포함됨)
+        // 필요한 다른 언어 추가
+      ],
       // -------------------------------- //
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

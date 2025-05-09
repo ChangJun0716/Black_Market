@@ -99,45 +99,52 @@ class _StoreReturnListState extends State<StoreReturnList> {
     }
   }
 
-  // 선택한 날짜와 대리점 코드에 맞는 반품 기록을 가져오는 메서드
-  // 메서드 인자에서 storeCode 추가 및 사용
+  // 선택한 날짜와 대리점 코드(현재는 사용 안 함)에 맞는 반품 기록을 가져와 현재 사용자 ID로 필터링하는 메서드
+  // storeCode 인자는 현재 스키마로 직접적인 대리점 필터링에 사용되지 않음
   void fetchReturns(DateTime date, String storeCode) async {
-    // storeCode 인자 추가
-    // storeCode 인자 유효성 체크
-    if (storeCode == null || storeCode.isEmpty) {
-      print('>>> fetchReturns: storeCode 인자가 유효하지 않습니다.');
+    // storeCode 인자는 남아 있지만 현재 필터링에는 사용 안 함
+    // 현재 로그인된 사용자 ID 유효성 체크
+    if (_loggedInUserId == null || _loggedInUserId!.isEmpty) {
+      print('>>> fetchReturns: 로그인된 사용자 ID가 유효하지 않습니다. 데이터 로딩 중단.');
       setState(() {
         returnList = [];
       });
+      Get.snackbar(
+        '오류',
+        '로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return; // 함수 종료
     }
 
     try {
-      // TODO: 반품 기록을 가져올 때 '현재 대리점(_storeCode)' 기준으로 필터링하려면
-      // DatabaseHandler에 getReturnsByDateAndStore 메서드를 추가하고 여기서 호출해야 함.
-      // 현재 DatabaseHandler의 getReturnsByDate는 날짜로만 필터링합니다.
-      // 따라서, 가져온 전체 목록에서 대리점 코드와 일치하는 항목만 필터링하는 로직 추가 (효율성 고려 필요)
-      final fetchedReturns = await DatabaseHandler().getReturnsByDate(
+      // DatabaseHandler를 통해 해당 날짜의 모든 반품 기록 가져오기 (현재 스키마로 대리점 필터링 불가능)
+      final fetchedReturns = await _handler.getReturnsByDate(
         date,
-      ); // 현재는 날짜로만 필터링
+      ); // 날짜로만 필터링된 전체 반품 목록
 
-      // 가져온 목록에서 현재 대리점 코드와 일치하는 항목만 필터링
+      // 가져온 전체 반품 목록에서 현재 로그인한 사용자 ID로 반품 신청된 기록만 필터링
       final filteredReturns =
-          fetchedReturns
-              .where((item) => item['pStoreCode'] == storeCode)
-              .toList(); // purchase 테이블 join 필요시 pStoreCode 확인 가능
+          fetchedReturns.where((item) {
+            // item['ruserId'] 컬럼이 존재하고 현재 로그인된 사용자 ID와 일치하는 항목만 선택
+            // Map에서 'ruserId' 키는 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
+            final itemUserId = item['ruserId']?.toString();
+            return itemUserId != null && itemUserId == _loggedInUserId;
+          }).toList();
 
       setState(() {
-        // returnList = fetchedReturns; // 가져온 전체 목록으로 상태 업데이트 (필터링 없을 시)
         returnList = filteredReturns; // 필터링된 목록으로 상태 업데이트
       });
+      print(
+        '>>> 반품 기록 필터링 결과: ${returnList.length} 개 (사용자 ID: $_loggedInUserId 기준)',
+      ); // 로깅
     } catch (e) {
       // 에러 처리 로직 추가 (예: 에러 메시지 표시)
       print('반품 기록을 가져오는 중 오류 발생: ${e.toString()}');
       setState(() {
         returnList = []; // 오류 발생 시 목록 초기화
       });
-      // TODO: 사용자에게 오류 발생 알림 (예: SnackBar) 또는 Dialog
       Get.snackbar(
         '오류',
         '반품 목록을 가져오는데 실패했습니다: ${e.toString()}',
@@ -370,7 +377,13 @@ class _StoreReturnListState extends State<StoreReturnList> {
                                           ),
                                         ), // productsSize 케이스 반영
                                         // 만약 반품 날짜나 처리 상태도 표시하고 싶다면 컬럼 추가 및 Map 키 사용
-                                        // Expanded(flex: 2, child: Text(returnData['returnDate'] ?? '', style: TextStyle(fontSize: 12))),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            returnData['returnDate'] ?? '',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ),
                                         // Expanded(flex: 2, child: Text(returnData['processionStatus'] ?? '', style: TextStyle(fontSize: 12))), // processionStatus 케이스 반영
                                       ],
                                     ),
