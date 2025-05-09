@@ -49,6 +49,7 @@ class _CreateAccountState extends State<CreateAccount> {
       ),
       body: Center(
         child: Container(
+          width: 550,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -71,7 +72,9 @@ class _CreateAccountState extends State<CreateAccount> {
               // textField : PW
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: CustomTextField(label: '비밀번호를 입력 하세요', controller: pwCon),
+                child: CustomTextField(label: '비밀번호를 입력 하세요',
+                obscureText: true,
+                 controller: pwCon),
               ),
               // textField : Name
               Padding(
