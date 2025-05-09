@@ -1,5 +1,5 @@
 // 반품 관리
-import 'package:black_market_app/view/company/order/company_order_identification.dart';
+import 'package:black_market_app/view/company/company_return_detail.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,11 +15,6 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
   late DatabaseHandler handler;
   List<Map<String, dynamic>> returnList = [];
   String selectedStatus = '전체';
-  DateTime? startDate;
-  DateTime? endDate;
-  //우선 로그인을 받아올 곳이 없기 때문에 그 값을 대신 설정 해줌 
-  late String userid;
-  late String usergrade;
   final List<String> statusOptions = ['전체', '처리중', '완료', '반려'];
 
   @override
@@ -27,32 +22,14 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
     super.initState();
     handler = DatabaseHandler();
     loadReturns();
-    userid = "kimsua";
-    usergrade = "1234";
   }
 
   Future<void> loadReturns() async {
     returnList = await handler.loadFilteredReturns(
       status: selectedStatus,
-      start: startDate,
-      end: endDate,
+      
     );
     setState(() {});
-  }
-
-  Future<void> pickDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        startDate = picked.start;
-        endDate = picked.end;
-      });
-      loadReturns();
-    }
   }
 
   @override
@@ -60,7 +37,12 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("반품 관리 리스트"),
+        title: const Text("반품 관리 리스트",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        ),
         backgroundColor: Colors.black,
       ),
       body: Column(
@@ -81,10 +63,6 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
                   },
                 ),
                 const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: pickDateRange,
-                  child: const Text("날짜 선택"),
-                )
               ],
             ),
           ),
@@ -121,11 +99,14 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
                   final shortReason = reason.length > 15 ? '${reason.substring(0, 15)}...' : reason;
                   return GestureDetector(
                     onTap: () {
-                      Get.to(() => CompanyOrderDetail(
-                      returnData: item,
-                      userId: userid,  
-                      jobGradeCode: usergrade,
-                      ));
+                      Get.to(() => CompanyReturnDetail(),
+                        arguments: item,
+                      )!.then((Value)=>{
+                        loadReturns(),
+                        setState(() {
+                          
+                        })
+                      });
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -133,7 +114,7 @@ class _CompanyReturnListState extends State<CompanyReturnList> {
                         children: [
                           Expanded(flex: 4, child: Text(shortReason, style: const TextStyle(color: Colors.white))),
                           Expanded(flex: 3, child: Text(item['ruserId'] ?? '', style: const TextStyle(color: Colors.white))),
-                          Expanded(flex: 3, child: Text(item['prosessionStateus'] ?? '', style: const TextStyle(color: Colors.white))),
+                          Expanded(flex: 3, child: Text(item['processionStatus'] ?? '', style: const TextStyle(color: Colors.white))),
                         ],
                       ),
                     ),

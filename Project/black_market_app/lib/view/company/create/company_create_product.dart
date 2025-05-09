@@ -2,30 +2,38 @@
 import 'dart:typed_data';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart'; 
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/vm/database_handler.dart';
+
 class CompanyCreateProduct extends StatefulWidget {
- const CompanyCreateProduct({super.key});
+  const CompanyCreateProduct({super.key});
+
   @override
   State<CompanyCreateProduct> createState() => _CompanyCreateProductState();
 }
+
 class _CompanyCreateProductState extends State<CompanyCreateProduct> {
   final _formKey = GlobalKey<FormState>();
   final _colorController = TextEditingController();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _sizeController = TextEditingController();
+  final _opriceController = TextEditingController();
   late DatabaseHandler handler;
+
   Uint8List? _imageBytes;
+
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler();
   }
+
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
     if (image != null) {
       final bytes = await image.readAsBytes();
       setState(() {
@@ -33,20 +41,24 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
       });
     }
   }
+
   Future<void> _submit() async {
     if (_formKey.currentState!.validate() && _imageBytes != null) {
       final product = Products(
         productsColor: _colorController.text,
         productsName: _nameController.text,
         productsPrice: int.parse(_priceController.text),
+        productsOPrice: int.parse(_opriceController.text),
         productsSize: int.parse(_sizeController.text),
         productsImage: _imageBytes!,
       );
+
       try {
         await handler.insertProduct(product);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("제품이 등록되었습니다.")),
         );
+
         _colorController.clear();
         _nameController.clear();
         _priceController.clear();
@@ -65,14 +77,17 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
       );
     }
   }
+
   @override
   void dispose() {
     _colorController.dispose();
     _nameController.dispose();
     _priceController.dispose();
     _sizeController.dispose();
+    _opriceController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,7 +111,8 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
                 children: [
                   _buildTextField(_colorController, '제품 컬러', TextInputType.text),
                   _buildTextField(_nameController, '제품명', TextInputType.text),
-                  _buildTextField(_priceController, '가격', TextInputType.number),
+                  _buildTextField(_priceController, '판매 가격', TextInputType.number),
+                  _buildTextField(_opriceController, '구매 가격', TextInputType.number),
                   _buildTextField(_sizeController, '사이즈', TextInputType.number),
                   SizedBox(height: 12),
                   CustomButton(
@@ -129,7 +145,8 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
       ),
     );
   }
- Widget _buildTextField(
+
+  Widget _buildTextField(
       TextEditingController controller, String label, TextInputType type) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

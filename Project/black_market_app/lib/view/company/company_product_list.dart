@@ -122,9 +122,10 @@ class _CompanyProductListState extends State<CompanyProductList> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
               onPressed: () async {
-                await Get.to(const CompanyCreateProduct());
-                _loadProducts(); // 등록 후 다시 로드
-              },
+              await Get.to(() => const CompanyCreateProduct());
+              _loadProducts(); // 제품 등록 후 재로딩
+                 },
+
               child: const Text('제품 등록'),
             ),
           ),

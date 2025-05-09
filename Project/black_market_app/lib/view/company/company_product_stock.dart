@@ -1,8 +1,8 @@
 // 입고 페이지
-
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../model/stock_receipts.dart';
 
 class CompanyProductStock extends StatefulWidget {
@@ -14,69 +14,122 @@ class CompanyProductStock extends StatefulWidget {
 
 class _CompanyProductStockState extends State<CompanyProductStock> {
   late DatabaseHandler handler;
-  late List<Map<String, dynamic>> selectedItems;
-  final Map<String, TextEditingController> quantityControllers = {};
+  late Map<String, dynamic> selectedItem;
+  final TextEditingController quantityController = TextEditingController();
 
-  // 나중에 로그인이 완성이 되면 로그인한 관리자의 정보를 받아올 곳!
-  String userId = "user01";
-  String jobGradeCode = "G3";
+  final box = GetStorage();
+  late String userId;
+
+  List<String> manufacturerList = [];
+  String? selectedManufacturer;
 
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler();
-    selectedItems = List<Map<String, dynamic>>.from(Get.arguments);
-    for (var item in selectedItems) {
-      quantityControllers[item['productsCode']] = TextEditingController();
+    selectedItem = Map<String, dynamic>.from(Get.arguments);
+    userId = box.read('uid') ?? '';
+    loadManufacturers();
+  }
+
+  Future<void> loadManufacturers() async {
+    try {
+      final list = await handler.getManufacturers();
+      setState(() {
+        manufacturerList = list;
+        selectedManufacturer = selectedItem['manufacturerName'];
+        if (!manufacturerList.contains(selectedManufacturer)) {
+          selectedManufacturer = manufacturerList.isNotEmpty ? manufacturerList.first : null;
+        }
+      });
+    } catch (e) {
+      debugPrint("제조사 로딩 오류: $e");
     }
   }
 
   void submitStockReceipts() async {
-    for (var item in selectedItems) {
-      final code = item['productsCode'];
-      final currentStock = item['currentStock'];
-      final manufacturer = item['manufacturerName'];
-      final controller = quantityControllers[code];
-      final input = controller?.text ?? '';
-      final qty = int.tryParse(input);
+    try {
+      debugPrint('[입고 시작]');
 
-      if (qty == null || qty <= 0) {
+      final code = selectedItem['productsCode'];
+      final currentStock = selectedItem['currentStock'];
+      final input = quantityController.text;
+      final qty = int.tryParse(input);
+      final receiptDate = DateTime.now();
+
+      if (qty == null || qty <= 0 || selectedManufacturer == null) {
+        debugPrint('[입력 오류] 수량: $qty, 제조사: $selectedManufacturer');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${item['productsName']} 수량을 올바르게 입력해주세요.')),
+          const SnackBar(content: Text('수량 또는 제조사를 올바르게 입력해주세요.')),
         );
         return;
       }
 
-      final receipt = StockReceipts(
-        saUserid: userId,
-        saJobGradeCode: jobGradeCode,
-        stockReceiptsQuantityReceived: qty,
-        stockReceiptsReceipDate: DateTime.now(),
-        sproductCode: code,
-        smanufacturerName: manufacturer ?? '',
+      debugPrint('[입력 확인 완료]');
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('입고 확인'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('제품코드: $code'),
+              Text('입고 수량: $qty'),
+              Text('입고 날짜: ${receiptDate.toIso8601String().split("T")[0]}'),
+              Text('제조사: $selectedManufacturer'),
+              Text('처리자 ID: $userId'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
       );
 
-      // 1. 입고 내역 저장
+      if (confirmed != true) {
+        debugPrint('[사용자 취소]');
+        return;
+      }
+
+      final receipt = StockReceipts(
+      saUserid: userId,
+      stockReceiptsQuantityReceived: qty,
+      stockReceiptsReceipDate: receiptDate,
+      sproductCode: code.toString(), // 여기 수정
+      smanufacturerName: selectedManufacturer!,
+      );
+
+
+      debugPrint('[입고 모델 생성 완료]');
       await handler.insertStockReceipt(receipt);
+      debugPrint('[입고 DB 저장 완료]');
 
-      // 2. 재고 증가
-      await handler.updateStock(code, currentStock + qty);
-
-      // 3. 발주 상태 초기화
-      await handler.updateOrderStateToEmpty(code);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('입고 처리가 완료되었습니다.')),
+      );
+      Get.back();
+    } catch (e, stack) {
+      debugPrint('[에러 발생]');
+      debugPrint(e.toString());
+      debugPrint(stack.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('입고 중 오류 발생: $e')),
+      );
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('입고 처리가 완료되었습니다.')),
-    );
-    Get.back();
   }
 
   @override
   void dispose() {
-    for (var controller in quantityControllers.values) {
-      controller.dispose();
-    }
+    quantityController.dispose();
     super.dispose();
   }
 
@@ -85,59 +138,71 @@ class _CompanyProductStockState extends State<CompanyProductStock> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("입고 페이지"),
+        title: const Text("입고 페이지",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        ),
+        backgroundColor: Colors.black,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: selectedItems.length,
-              itemBuilder: (context, index) {
-                final item = selectedItems[index];
-                final controller = quantityControllers[item['productsCode']]!;
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: index % 2 == 0 ? Colors.grey[850] : Colors.grey[800],
-                    border: const Border(bottom: BorderSide(color: Colors.grey)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          item['productsName'],
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: controller,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: '수량',
-                            hintStyle: TextStyle(color: Colors.white54),
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Card(
+              color: Colors.grey[900],
+              child: ListTile(
+                title: Text(
+                  '${selectedItem['productsName']} (ID: ${selectedItem['productsCode']})',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  '컬러: ${selectedItem['productsColor']} / 사이즈: ${selectedItem['productsSize']} / 재고: ${selectedItem['currentStock']}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
             ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: submitStockReceipts,
-              child: const Text('입고하기'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: manufacturerList.contains(selectedManufacturer) ? selectedManufacturer : null,
+              items: manufacturerList.map((name) => DropdownMenuItem(
+                value: name,
+                child: Text(name),
+              )).toList(),
+              onChanged: (value) => setState(() => selectedManufacturer = value),
+              decoration: const InputDecoration(
+                labelText: '제조사 선택',
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(),
+              ),
+              dropdownColor: Colors.black,
+              style: const TextStyle(color: Colors.white),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: '입고 수량 입력',
+                hintStyle: TextStyle(color: Colors.white54),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(),
+              ),
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: submitStockReceipts,
+                child: const Text('입고하기'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
