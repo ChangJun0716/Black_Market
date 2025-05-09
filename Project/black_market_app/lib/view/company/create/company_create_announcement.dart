@@ -1,6 +1,7 @@
 // company_create_announcement.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // GetX 임포트 (Snackbar 등 사용)
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart'; // 날짜 포맷을 위해 intl 패키지 사용
 import 'package:image_picker/image_picker.dart'; // 사진 첨부를 위해 image_picker 패키지 사용
 import 'dart:io'; // File 객체 사용을 위해 임포트
@@ -23,25 +24,27 @@ class CompanyCreateAnnouncement extends StatefulWidget {
 
 class _CompanyCreateAnnouncementState extends State<CompanyCreateAnnouncement> {
   late DatabaseHandler handler;
+  final box = GetStorage();
 
   // 입력 필드 컨트롤러
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
-  // 자동 설정될 정보
-  // TODO: 실제 로그인된 본사 사용자의 ID와 직급 코드를 가져오는 로직 구현 필요
-  String _cuserid = 'YOUR_LOGGED_IN_USER_ID'; // <<< 중요: 실제 사용자 ID로 바꿔주세요!
-  String _cajobGradeCode = 'YOUR_JOB_GRADE_CODE'; // <<< 중요: 실제 직급 코드로 바꿔주세요!
-  String _date = DateFormat('yyyy-MM-dd').format(DateTime.now()); // 현재 날짜 자동 설정
-
   // 사진 첨부 관련 상태
   File? _photoFile; // 첨부된 사진 파일
   Uint8List? _photoBytes; // BLOB 저장을 위한 사진 바이트 데이터
 
+  // 자동 설정될 정보
+  // TODO: 실제 로그인된 본사 사용자의 ID와 직급 코드를 가져오는 로직 구현 필요
+
+  String _cuserid = 'YOUR_LOGGED_IN_USER_ID';
+  String _cajobGradeCode = 'YOUR_JOB_GRADE_CODE'; // <<< 실제 직급 코드로 바꿔주세요!
+  String _date = DateFormat('yyyy-MM-dd').format(DateTime.now()); // 현재 날짜 자동 설정
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler(); // 핸들러 인스턴스 생성
+    _cuserid = box.read('uid');
   }
 
   @override
@@ -185,11 +188,6 @@ class _CompanyCreateAnnouncementState extends State<CompanyCreateAnnouncement> {
             // 작성자 정보 (자동 설정되며 표시만 함)
             Text(
               '작성자 ID: $_cuserid',
-              style: TextStyle(fontSize: 14, color: Colors.blueGrey),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '작성자 직급 코드: $_cajobGradeCode',
               style: TextStyle(fontSize: 14, color: Colors.blueGrey),
             ),
             SizedBox(height: 4),

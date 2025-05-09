@@ -438,7 +438,9 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
                                         Expanded(
                                           flex: 2,
                                           child: Text(
-                                            orderData['oproductCode'] ?? '',
+                                            orderData['oproductCode']
+                                                    .toString() ??
+                                                '',
                                             style: TextStyle(fontSize: 12),
                                           ),
                                         ), // oproductCode 케이스 반영
