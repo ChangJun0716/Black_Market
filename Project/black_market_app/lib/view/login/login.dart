@@ -37,28 +37,40 @@ class _LoginState extends State<Login> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // textField : id
-            CustomTextField(label: '아이디를 입력 하세요', controller: idCon),
-            // textField : pw
-            CustomTextField(label: '비밀번호를 입력 하세요', controller: pwCon),
-            // button : login
-            CustomButton(
-              text: '로그인',
-              onPressed: () {
-                loginCheck(idCon.text, pwCon.text);
-              },
-            ),
-            // button : 회원가입
-            CustomTextButton(
-              text: '회원 가입',
-              onPressed: () {
-                Get.to(CreateAccount());
-              },
-            ),
-          ],
+        child: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // textField : id
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CustomTextField(label: '아이디를 입력 하세요', controller: idCon),
+              ),
+              // textField : pw
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CustomTextField(
+                  label: '비밀번호를 입력 하세요',
+                  obscureText: true,
+                  controller: pwCon),
+              ),
+              // button : login
+              CustomButton(
+                text: '로그인',
+                onPressed: () {
+                  loginCheck(idCon.text, pwCon.text);
+                },
+              ),
+              // button : 회원가입
+              CustomTextButton(
+                text: '회원 가입',
+                onPressed: () {
+                  Get.to(CreateAccount());
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

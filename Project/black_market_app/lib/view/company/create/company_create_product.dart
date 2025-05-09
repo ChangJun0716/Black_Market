@@ -58,7 +58,7 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("제품이 등록되었습니다.")),
         );
-
+        _opriceController.clear();
         _colorController.clear();
         _nameController.clear();
         _priceController.clear();
