@@ -30,6 +30,7 @@ class _CustomerProductDetailState extends State<CustomerProductDetail> {
   bool isReady = false;
   late Map args;
 late ProductRegistration product;
+int stock = 0;
 
 @override
 void initState() {
@@ -52,7 +53,7 @@ void initState() {
   selectedStore = '';
 
   
-  handler.findProductNameByTitle(ptitle).then((name) {
+  handler.findProductNameByTitle(ptitle).then((name) async{
     if (name == null) {
       CustomSnackbar().showSnackbar(
         title: '에러',
@@ -64,6 +65,11 @@ void initState() {
     } else {
       productsName = name;
       uid = box.read('uid') ?? '';
+      final result = await handler.queryProductDetails(name);
+    if (result.isNotEmpty) {
+      final code = result.first['productsCode'].toString();
+      stock = await handler.getProductStock(code);
+    }
       isReady = true;
       setState(() {});
     }
@@ -180,35 +186,56 @@ void initState() {
                             ),
                           ],
                         ),
+                        Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: Text('현재 재고량: $stock 개'),
+),
                         CustomButton(
                           text: '장바구니 담기',
-                          onPressed: () async {
-                            if (selectedStore == '' ||
-                                quantityCon.text.trim().isEmpty) {
-                              CustomSnackbar().showSnackbar(
-                                title: '오류',
-                                message: '선택하지 않은 항목이 있습니다.',
-                                backgroundColor: Colors.red,
-                                textColor: Colors.white,
-                              );
-                            } else {
-                              await handler.addShopingCart(
-                                Purchase(
-                                  purchaseDate: now.toString(),
-                                  purchaseQuanity: int.parse(quantityCon.text),
-                                  purchaseCardId: 1,
-                                  pUserId: uid,
-                                  pStoreCode: selectedStore,
-                                  purchaseDeliveryStatus: '장바구니',
-                                  oproductCode: selected['productsCode'].toString(),
-                                  purchasePrice:
-                                      selected['productsPrice'] *int.parse(quantityCon.text),
-                                ),
-                              );
-                              Get.back();
-                              CustomSnackbar().showSnackbar(title: '장바구니 담기 성공', message: '해당 상품이 장바구니에 추가되었습니다.', backgroundColor: Colors.black, textColor: Colors.white);
-                            }
-                          },
+onPressed: () async {
+  if (selectedStore == '' || quantityCon.text.trim().isEmpty) {
+    CustomSnackbar().showSnackbar(
+      title: '오류',
+      message: '선택하지 않은 항목이 있습니다.',
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+    );
+  } else {
+    final inputQty = int.tryParse(quantityCon.text) ?? 0;
+    final productCode = selected['productsCode'].toString();
+    final currentStock = await handler.getProductStock(productCode);
+
+    if (inputQty > currentStock) {
+      CustomSnackbar().showSnackbar(
+        title: '주문 실패',
+        message: '재고보다 많은 수량을 주문할 수 없습니다. (재고: $currentStock)',
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    await handler.addShopingCart(
+      Purchase(
+        purchaseDate: now.toString(),
+        purchaseQuanity: inputQty,
+        purchaseCardId: 1,
+        pUserId: uid,
+        pStoreCode: selectedStore,
+        purchaseDeliveryStatus: '장바구니',
+        oproductCode: productCode,
+        purchasePrice: selected['productsPrice'] * inputQty,
+      ),
+    );
+    Get.back();
+    CustomSnackbar().showSnackbar(
+      title: '장바구니 담기 성공',
+      message: '해당 상품이 장바구니에 추가되었습니다.',
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+    );
+  }
+}
                         ),
                       ],
                     ),

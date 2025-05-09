@@ -1415,4 +1415,26 @@ class DatabaseHandler {
   }
 
   // ------------------------------ //
+    Future<int> getProductStock(String productCode) async {
+  final db = await initializeDB();
+
+  // dispatch에서 제품별 수량 합계
+  final dispatchResult = await db.rawQuery('''
+    SELECT SUM(dispatchedQuantity) as total FROM dispatch
+    WHERE dProductCode = ?
+  ''', [productCode]);
+
+  final dispatched = dispatchResult.first['total'] as int? ?? 0;
+
+  // purchase에서 장바구니 제외한 제품별 수량 합계
+  final purchaseResult = await db.rawQuery('''
+    SELECT SUM(purchaseQuanity) as total FROM purchase
+    WHERE oproductCode = ? AND purchaseDeliveryStatus != '장바구니'
+  ''', [productCode]);
+
+  final purchased = purchaseResult.first['total'] as int? ?? 0;
+
+  return dispatched - purchased;
+}
+  // ------------------------------ //
 } // class
