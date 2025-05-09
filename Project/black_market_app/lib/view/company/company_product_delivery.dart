@@ -1,11 +1,10 @@
-// 출고 페이지: 변경된 쿼리 방식 적용 (UI에서 재고 계산 → DB에는 update만)
-
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:get_storage/get_storage.dart';
 import '../../model/dispatch.dart';
 import '../../model/store.dart';
+import '../../model/purchase.dart';
 
 class CompanyProductDelivery extends StatefulWidget {
   const CompanyProductDelivery({super.key});
@@ -16,23 +15,23 @@ class CompanyProductDelivery extends StatefulWidget {
 
 class _CompanyProductDeliveryState extends State<CompanyProductDelivery> {
   late DatabaseHandler handler;
-  late List<Map<String, dynamic>> selectedItems;
-  final Map<String, TextEditingController> quantityControllers = {};
+  late Map<String, dynamic> selectedItem;
+  final TextEditingController quantityController = TextEditingController();
+  final box = GetStorage();
+  late String userId;
 
   List<Store> storeList = [];
   Store? selectedStore;
-  //나중에 로그인 구현이 돼서 로그인 정보를 받아오면 그 정보가 입력될 곳 
-  String userId = "user01";
-  String jobGradeCode = "G3";
+  List<int> pendingOrderIds = [];
+  int? selectedOrderId;
+  Purchase? selectedOrderInfo;
 
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler();
-    selectedItems = List<Map<String, dynamic>>.from(Get.arguments);
-    for (var item in selectedItems) {
-      quantityControllers[item['productsCode']] = TextEditingController();
-    }
+    selectedItem = Map<String, dynamic>.from(Get.arguments);
+    userId = box.read('uid') ?? '';
     loadStores();
   }
 
@@ -42,60 +41,79 @@ class _CompanyProductDeliveryState extends State<CompanyProductDelivery> {
       storeList = stores;
       if (stores.isNotEmpty) selectedStore = stores.first;
     });
+    loadPendingOrders();
+  }
+
+  Future<void> loadPendingOrders() async {
+    final storeCode = selectedStore?.storeCode;
+
+    if (storeCode != null && storeCode.isNotEmpty) {
+      try {
+        debugPrint("🔍 대리점 선택됨: $storeCode");
+
+        final list = await handler.getPendingOrderIdsForDispatch(
+          selectedItem['productsCode'],
+          storeCode,
+        );
+
+        debugPrint("✅ 주문 ID 리스트: $list");
+        setState(() {
+          pendingOrderIds = list;
+          selectedOrderId = list.isNotEmpty ? list.first : null;
+        });
+
+        if (selectedOrderId != null) {
+          final order = await handler.getPurchaseById(selectedOrderId!);
+          setState(() => selectedOrderInfo = order);
+        }
+      } catch (e, stack) {
+        debugPrint("❌ 주문 목록 로딩 오류: $e");
+        debugPrint("📌 StackTrace: $stack");
+      }
+    } else {
+      debugPrint("⚠️ 선택된 대리점의 storeCode가 null이거나 비어 있습니다.");
+    }
   }
 
   void submitDispatch() async {
-    if (selectedStore == null) {
+    final int code = selectedItem['productsCode'];
+    final int currentStock = selectedItem['currentStock'];
+    final input = quantityController.text;
+    final qty = int.tryParse(input);
+
+    if (qty == null || qty <= 0 || selectedStore == null || selectedOrderId == null || selectedOrderInfo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('대리점을 선택해주세요.')),
+        const SnackBar(content: Text('수량, 대리점, 주문 ID를 모두 정확히 입력해주세요.')),
       );
       return;
     }
 
-    for (var item in selectedItems) {
-      final code = item['productsCode'];
-      final currentStock = item['currentStock'];
-      final controller = quantityControllers[code];
-      final input = controller?.text ?? '';
-      final qty = int.tryParse(input);
-
-      if (qty == null || qty <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${item['productsName']} 수량을 올바르게 입력해주세요.')),
-        );
-        return;
-      }
-
-      if (qty > currentStock) {
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("출고 실패"),
-            content: Text("출고 수량이 재고($currentStock)를 초과했습니다."),
-            actions: [
-              TextButton(
-                child: const Text("확인"),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-
-      final dispatch = Dispatch(
-        dUserid: userId,
-        daJobGradeCode: jobGradeCode,
-        dProductCode: code,
-        dispatchDate: DateTime.now(),
-        dispatchedQuantity: qty,
-        dstoreCode: selectedStore!.storeCode,
+    if (qty > currentStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('출고 수량이 재고($currentStock)를 초과했습니다.')),
       );
-
-      await handler.insertDispatch(dispatch);
-      await handler.updateStock(code, currentStock - qty);
-      await handler.updatePurchaseDeliveryStatus(code, selectedStore!.storeCode);
+      return;
     }
+
+    if (qty > selectedOrderInfo!.purchaseQuanity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('출고 수량이 주문 수량(${selectedOrderInfo!.purchaseQuanity})을 초과했습니다.')),
+      );
+      return;
+    }
+
+    final dispatch = Dispatch(
+      dUserid: userId,
+      dProductCode: code,
+      dispatchDate: DateTime.now(),
+      dispatchedQuantity: qty,
+      dstoreCode: selectedStore!.storeCode,
+      dipurchaseId: selectedOrderId!,
+    );
+
+    await handler.insertDispatch(dispatch);
+   await handler.updatePurchaseDeliveryStatus(selectedOrderId!);
+
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('출고 처리가 완료되었습니다.')),
@@ -105,9 +123,7 @@ class _CompanyProductDeliveryState extends State<CompanyProductDelivery> {
 
   @override
   void dispose() {
-    for (var controller in quantityControllers.values) {
-      controller.dispose();
-    }
+    quantityController.dispose();
     super.dispose();
   }
 
@@ -115,79 +131,101 @@ class _CompanyProductDeliveryState extends State<CompanyProductDelivery> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text("출고 페이지")),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey[850],
-            child: DropdownButton<Store>(
-              dropdownColor: Colors.grey[900],
+      appBar: AppBar(
+        title: const Text("출고 페이지"),
+        backgroundColor: Colors.black,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Card(
+              color: Colors.grey[900],
+              child: ListTile(
+                title: Text(
+                  '${selectedItem['productsName']} (ID: ${selectedItem['productsCode']})',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  '컬러: ${selectedItem['productsColor']} / 사이즈: ${selectedItem['productsSize']} / 재고: ${selectedItem['currentStock']}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Store>(
               value: selectedStore,
-              isExpanded: true,
-              items: storeList.map((store) {
-                return DropdownMenuItem<Store>(
-                  value: store,
-                  child: Text(store.storeName, style: const TextStyle(color: Colors.white)),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedStore = value;
-                });
+              items: storeList.map((store) => DropdownMenuItem(
+                value: store,
+                child: Text(store.storeName),
+              )).toList(),
+              onChanged: (value) async {
+                setState(() => selectedStore = value);
+                await loadPendingOrders();
               },
-              hint: const Text('대리점 선택', style: TextStyle(color: Colors.white54)),
+              decoration: const InputDecoration(
+                labelText: '대리점 선택',
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(),
+              ),
+              dropdownColor: Colors.black,
+              style: const TextStyle(color: Colors.white),
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: selectedItems.length,
-              itemBuilder: (context, index) {
-                final item = selectedItems[index];
-                final controller = quantityControllers[item['productsCode']]!;
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: index % 2 == 0 ? Colors.grey[850] : Colors.grey[800],
-                    border: const Border(bottom: BorderSide(color: Colors.grey)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          item['productsName'],
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: controller,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: '수량',
-                            hintStyle: TextStyle(color: Colors.white54),
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+            const SizedBox(height: 16),
+            DropdownButtonFormField<int>(
+              value: selectedOrderId,
+              items: pendingOrderIds.map((id) => DropdownMenuItem<int>(
+                value: id,
+                child: Text('주문 ID: $id'),
+              )).toList(),
+              onChanged: (value) async {
+                setState(() => selectedOrderId = value);
+                if (value != null) {
+                  final order = await handler.getPurchaseById(value);
+                  setState(() => selectedOrderInfo = order);
+                }
               },
+              decoration: const InputDecoration(
+                labelText: '주문 선택',
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(),
+              ),
+              dropdownColor: Colors.black,
+              style: const TextStyle(color: Colors.white),
             ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: submitDispatch,
-              child: const Text('출고하기'),
+            if (selectedOrderInfo != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  '주문 수량: ${selectedOrderInfo!.purchaseQuanity} / 고객 ID: ${selectedOrderInfo!.pUserId}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: '출고 수량 입력',
+                hintStyle: TextStyle(color: Colors.white54),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(),
+              ),
+              style: const TextStyle(color: Colors.white),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: submitDispatch,
+                child: const Text('출고하기'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

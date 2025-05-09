@@ -1,4 +1,5 @@
 //제품 게시글 작성
+//제품 게시글 작성
 import 'dart:typed_data';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/product_registration.dart';

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
 import 'package:black_market_app/model/create_notice.dart';
+import 'package:black_market_app/model/grade.dart';
 import 'package:black_market_app/model/grouped_products.dart';
+import 'package:black_market_app/model/manufacturers.dart';
+import 'package:black_market_app/model/order.dart';
 import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/purchase.dart';
@@ -21,83 +24,97 @@ class DatabaseHandler {
   Future<Database> initializeDB() async {
     String path = await getDatabasesPath();
     return openDatabase(
+      
       join(path, 'blackMarket.db'),
       onCreate: (db, version) async {
         // Table: affiliation
         await db.execute(
-          "CREATE TABLE affiliation(aJobGradeCode TEXT PRIMARY KEY, aUserid TEXT)",
+          "CREATE TABLE affiliation(aJobGradeCode TEXT, aUserid TEXT,joinDate TEXT)",
         );
-
+        
         // Table: createApprovalDocument (match with CreateApprovalDocument model)
         await db.execute(
-          "CREATE TABLE createApprovalDocument(cuserid TEXT, cajobGradeCode TEXT, name TEXT, title TEXT, content TEXT, date TEXT, rejectedReason TEXT, approvalStatus TEXT, approvalRequestExpense INTEGER)",
+          "CREATE TABLE createApprovalDocument(cuserid TEXT, cajobGradeCode TEXT,checkGradeCode TEXT,name TEXT, title TEXT, content TEXT, date TEXT, approvalStatus TEXT, approvalRequestExpense INTEGER,corderID INTEGER)",
         );
-
+        
         // Table: createNotice
         await db.execute(
           "CREATE TABLE createNotice(cuserid TEXT, cajobGradeCode TEXT, title TEXT, content TEXT, date TEXT, photo BLOB)",
         );
-
+        
         // Table: daffiliation
         await db.execute(
           "CREATE TABLE daffiliation(dstoreCode TEXT, duserId TEXT)",
         );
+        //전자 결재 시스템 테이블 approvalstep
+        await db.execute(
+  'CREATE TABLE IF NOT EXISTS approvalstep (documentId INTEGER, stepOrder INTEGER, approverId TEXT, status TEXT, comment TEXT, actionDate TEXT)'
+);
 
+
+        
         // Table: dispatch (대리점 ID 추가됨)
         await db.execute(
-          "CREATE TABLE dispatch(dUserid TEXT, daJobGradeCode TEXT, dProductCode TEXT, dispatchDate TEXT, dispatchedQuantity INTEGER, dstoreCode TEXT)",
+          "CREATE TABLE dispatch(dUserid TEXT, dProductCode TEXT, dispatchDate TEXT, dispatchedQuantity INTEGER, dstoreCode TEXT,dipurchaseId INTEGER)",
         );
-
+        
         // Table: grade
         await db.execute(
-          "CREATE TABLE grade(jobGradeCode TEXT PRIMARY KEY, gradeName TEXT, joinDate TEXT)",
+          "CREATE TABLE grade(jobGradeCode TEXT PRIMARY KEY, gradeName TEXT)",
         );
-
+        
         // Table: manufacturers (match with Manufacturers model)
         await db.execute(
           "CREATE TABLE manufacturers(manufacturerName TEXT PRIMARY KEY)",
         );
-
+        
         // Table: orders (match with Orders model)
         await db.execute(
-          "CREATE TABLE orders(orderQuantity TEXT, orderDate TEXT, orderStatus TEXT, orderPrice INTEGER, ajobGradCode TEXT, oaUserid TEXT, oproductCode TEXT, omamufacturer TEXT)",
+          "CREATE TABLE orders(orderID INTEGER , orderQuantity TEXT, orderDate TEXT, orderStatus TEXT, orderPrice INTEGER, oajobGradCode TEXT, oaUserid TEXT, oproductCode TEXT, omamufacturer TEXT)",
         );
-
+        
         // Table: productRegistration
-        await db.execute(
-          "CREATE TABLE productRegistration(paUserid TEXT, paJobGradeCode TEXT, pProductCode TEXT, introductionPhoto BLOB, ptitle TEXT, contentJson TEXT)",
-        );
+       await db.execute(
+        "CREATE TABLE productRegistration(paUserid TEXT, pProductCode TEXT, introductionPhoto BLOB, ptitle TEXT, contentJson TEXT)"
+      );
 
+
+
+        
         // Table: products (match with Products model)
         await db.execute(
-          "CREATE TABLE IF NOT EXISTS Products(productsCode INTEGER PRIMARY KEY AUTOINCREMENT,productsColor TEXT,productsName TEXT,productsPrice INTEGER,productsSize INTEGER,productsImage BLOB)",
+          "CREATE TABLE IF NOT EXISTS Products(productsCode INTEGER PRIMARY KEY AUTOINCREMENT,productsColor TEXT,productsName TEXT,productsPrice INTEGER,productsOPrice INTEGER,productsSize INTEGER,productsImage BLOB)",
         );
-
+        
         // Table: purchase (match with Purchase model)
         await db.execute(
-          "CREATE TABLE purchase(purchaseId integer PRIMARY KEY autoincrement, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode integer, purchasePrice INTEGER, pUserId TEXT)",
+          "CREATE TABLE purchase(purchaseId INTEGER PRIMARY KEY AUTOINCREMENT, purchaseDate TEXT, purchaseQuanity INTEGER, purchaseCardId INTEGER, pStoreCode TEXT, purchaseDeliveryStatus TEXT, oproductCode INTEGER, purchasePrice INTEGER,pUserId TEXT)",
         );
-
+        
         // Table: returnInvestigation (match with ReturnInvestigation model)
         await db.execute(
-          "CREATE TABLE returnInvestigation(raUserid TEXT, raJobGradeCode TEXT, rreturnCode INTEGER, rmanufacturerName TEXT, recordDate TEXT, resolutionDetails TEXT)",
-        );
+          'CREATE TABLE returnInvestigation (raUserid TEXT,raJobGradeCode TEXT,rreturnCode INTEGER,rmanufacturerName TEXT,recordDate TEXT,resolutionDetails TEXT) ',
+          
+          );
 
+
+
+        
         // Table: return (match with Return model)
         await db.execute(
           "CREATE TABLE return(returnCode INTEGER PRIMARY KEY, ruserId TEXT, rProductCode TEXT, returnReason TEXT, returnDate TEXT, returnCategory TEXT, processionStatus TEXT)",
         );
-
+        
         // Table: stockReceipts (match with StockReceipts model)
         await db.execute(
-          "CREATE TABLE stockReceipts(saUserid TEXT, saJobGradeCode TEXT, stockReceiptsQuantityReceived INTEGER, stockReceiptsReceipDate TEXT, sproductCode TEXT, smanufacturerName TEXT)",
+          "CREATE TABLE stockReceipts(saUserid TEXT, stockReceiptsQuantityReceived INTEGER, stockReceiptsReceipDate TEXT, sproductCode TEXT, smanufacturerName TEXT)",
         );
-
+        
         // Table: store (match with Store model)
         await db.execute(
           "CREATE TABLE store(storeCode TEXT PRIMARY KEY, storeName TEXT, address TEXT, longitude REAL, latitude REAL)",
         );
-
+        
         // Table: users (match with Users model)
         await db.execute(
           "CREATE TABLE users(userid TEXT PRIMARY KEY, password TEXT, name TEXT, phone TEXT, memberType INTEGER, birthDate TEXT, gender TEXT)",
@@ -106,6 +123,7 @@ class DatabaseHandler {
       version: 1,
     );
   }
+
 
   // 로그인 함수
   Future<int> loginUsers(String id, String pw) async {
@@ -272,395 +290,246 @@ class DatabaseHandler {
     return result.isNotEmpty ? result.first['storeCode'].toString() : null;
   }
 
-  //발주 내용 입력하기
-  Future<int> insertCreateApprovalDocument(CreateApprovalDocument doc) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
-    INSERT INTO createApprovalDocument(
-      cuserid, cajobGradeCode, name, title, content, date, 
-      rejectedReason, approvalStatus, approvalRequestExpense
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''',
-      [
-        doc.cUserid,
-        doc.cajobGradeCode,
-        doc.name,
-        doc.title,
-        doc.content,
-        doc.date.toIso8601String(),
-        doc.rejectedReason,
-        doc.approvalStatus,
-        doc.approvalRequestExpense,
-      ],
-    );
-  }
+  
 
-  //발주내역 등록하기
-  Future<int> insertOrder({
-    required int quantity,
-    required String date,
-    required String status,
-    required int price,
-    required String jobGradeCode,
-    required String userId,
-    required String productCode,
-    required String manufacturer,
-  }) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
-    INSERT INTO order (
-      orderQuantity, orderDate, orderStatus, orderPrice, 
-      ajobGradCode, oaUserid, oproductCode, omamufacturer
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''',
-      [
-        quantity.toString(),
-        date,
-        status,
-        price,
-        jobGradeCode,
-        userId,
-        productCode,
-        manufacturer,
-      ],
-    );
-  }
-
+  
   //결재서 검색
   Future<List<Map<String, dynamic>>> loadFilteredApprovals({
-    required String status,
-    DateTime? start,
-    DateTime? end,
-  }) async {
-    final db = await initializeDB();
-    String query = "SELECT * FROM createApprovalDocument";
-    List<String> whereClauses = [];
-    List<dynamic> args = [];
+  required String status,
+  DateTime? start,
+  DateTime? end,
+}) async {
+  final db = await initializeDB();
+  String query = "SELECT * FROM createApprovalDocument";
+  List<String> whereClauses = [];
+  List<dynamic> args = [];
 
-    if (status != '전체') {
-      whereClauses.add("approvalStatus = ?");
-      args.add(status);
-    }
-
-    if (start != null && end != null) {
-      whereClauses.add("date BETWEEN ? AND ?");
-      args.add(DateFormat('yyyy-MM-dd').format(start));
-      args.add(DateFormat('yyyy-MM-dd').format(end));
-    }
-
-    if (whereClauses.isNotEmpty) {
-      query += " WHERE " + whereClauses.join(" AND ");
-    }
-
-    query += " ORDER BY date DESC";
-    return await db.rawQuery(query, args);
+  if (status != '전체') {
+    whereClauses.add("approvalStatus = ?");
+    args.add(status);
   }
 
-  // 결재 승인 처리
-  Future<void> updateApprovalStatus({
-    required String userId,
-    required String date,
-    required String status,
-  }) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
+  if (start != null && end != null) {
+    whereClauses.add("date BETWEEN ? AND ?");
+    args.add(DateFormat('yyyy-MM-dd').format(start));
+    args.add(DateFormat('yyyy-MM-dd').format(end));
+  }
+
+  if (whereClauses.isNotEmpty) {
+    query += " WHERE " + whereClauses.join(" AND ");
+  }
+
+  query += " ORDER BY date DESC";
+  return await db.rawQuery(query, args);
+}
+// 결재 승인 처리
+Future<void> updateApprovalStatus({
+  required String userId,
+  required String date,
+  required String status,
+}) async {
+  final db = await initializeDB();
+  await db.rawUpdate(
+    '''
     UPDATE createApprovalDocument 
     SET approvalStatus = ? 
     WHERE cuserid = ? AND date = ?
     ''',
-      [status, userId, date],
-    );
-  }
+    [status, userId, date],
+  );
+}
+
 
   // 결재 반려 처리
   Future<void> rejectApproval({
-    required String userId,
-    required String date,
-    required String reason,
-  }) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
+  required String userId,
+  required String date,
+  required String reason,
+}) async {
+  final db = await initializeDB();
+  await db.rawUpdate(
+    '''
     UPDATE createApprovalDocument 
     SET approvalStatus = '반려됨', rejectedReason = ? 
     WHERE cuserid = ? AND date = ?
     ''',
-      [reason, userId, date],
-    );
-  }
+    [reason, userId, date],
+  );
+}
 
   //입고 넣기
   Future<int> insertStockReceipt(StockReceipts receipt) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
-    INSERT INTO stockReceipts(
-      saUserid,
-      saJobGradeCode,
-      stockReceiptsQuantityReceived,
-      stockReceiptsReceipDate,
-      sproductCode,
-      smanufacturerName
-    ) VALUES (?, ?, ?, ?, ?, ?)
-    ''',
-      [
-        receipt.saUserid,
-        receipt.saJobGradeCode,
-        receipt.stockReceiptsQuantityReceived,
-        receipt.stockReceiptsReceipDate.toIso8601String(), // <- 여기만 변환 필요
-        receipt.sproductCode,
-        receipt.smanufacturerName,
-      ],
-    );
-  }
+  final db = await initializeDB();
+  return await db.insert(
+    'stockReceipts',
+    {
+      'saUserid': receipt.saUserid,
+      'stockReceiptsQuantityReceived': receipt.stockReceiptsQuantityReceived,
+      'stockReceiptsReceipDate': receipt.stockReceiptsReceipDate.toIso8601String(),
+      'sproductCode': receipt.sproductCode,
+      'smanufacturerName': receipt.smanufacturerName,
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
 
-  //입고 되었을 때 발주 상태를 업그레이드 해주는 쿼리문
-  Future<void> updateOrderStateToEmpty(String productCode) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
-    UPDATE orders
-    SET orderState = ''
-    WHERE productCode = ?
-    ''',
-      [productCode],
-    );
-  }
+ 
 
-  //대리점 불러올 때 쿼리문
-  Future<List<Store>> getStoreList() async {
-    final db = await initializeDB();
-    final List<Map<String, dynamic>> maps = await db.query('store');
-    return maps.map((e) => Store.fromMap(e)).toList();
-  }
+ //대리점 불러올 때 쿼리문 
+Future<List<Store>> getStoreList() async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> maps = await db.query('store');
+  return maps.map((e) => Store.fromMap(e)).toList();
+}
 
-  //출고할 때 쿼리문
-  Future<int> insertDispatch(Dispatch dispatch) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
+  //출고할 때 쿼리문 
+Future<int> insertDispatch(Dispatch dispatch) async {
+  final db = await initializeDB();
+  return await db.rawInsert(
+    '''
     INSERT INTO dispatch(
       dUserid,
-      daJobGradeCode,
       dProductCode,
       dispatchDate,
       dispatchedQuantity,
-      dstoreCode
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      dstoreCode,
+      dipurchaseId
+    ) VALUES (?, ?, ?, ?, ?,?)
     ''',
-      [
-        dispatch.dUserid,
-        dispatch.daJobGradeCode,
-        dispatch.dProductCode,
-        dispatch.dispatchDate.toIso8601String(),
-        dispatch.dispatchedQuantity,
-        dispatch.dstoreCode,
-      ],
-    );
-  }
-  //출고 하고 본새 재고 업데이트
+    [
+      dispatch.dUserid,
+      dispatch.dProductCode,
+      dispatch.dispatchDate.toIso8601String(),
+      dispatch.dispatchedQuantity,
+      dispatch.dstoreCode,
+      dispatch.dipurchaseId
+    ],
+  );
+}
 
-  Future<void> updateStock(String productCode, int newStock) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
-    UPDATE products
-    SET currentStock = ?
-    WHERE productsCode = ?
-    ''',
-      [newStock, productCode],
-    );
-  }
 
-  // 본사에서 구매 해당 상품을 출고 했을 때 배송 상태 업데이트 하는 쿼리문
-  Future<void> updatePurchaseDeliveryStatus(
-    String productCode,
-    String storeCode,
-  ) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
-    UPDATE Purchase
-    SET purchaseDeliveryStatus = '본사배송시작'
-    WHERE oproductcode = ? AND pStoreCode = ?
-    ''',
-      [productCode, storeCode],
-    );
-  }
+// 본사에서 구매 해당 상품을 출고 했을 때 배송 상태 업데이트 하는 쿼리문 
+Future<void> updatePurchaseDeliveryStatus(int purchaseId) async {
+  final db = await initializeDB();
+  await db.update(
+    'purchase',
+    {'purchaseDeliveryStatus': '본사배송시작'},
+    where: 'purchaseId = ?',
+    whereArgs: [purchaseId],
+  );
+}
 
-  //입출고 재고 리스트 불러오기
-  Future<List<Map<String, dynamic>>> getCompanyStockList() async {
-    final db = await initializeDB();
-    final result = await db.rawQuery('''
-    SELECT 
-      p.productsCode,
-      p.productsName,
-      p.productsColor,
-      p.productsSize,
-      p.productsPrice,
-      (
-        SELECT smanufacturerName 
-        FROM stockReceipts 
-        WHERE sproductCode = p.productsCode 
-        ORDER BY stockReceiptsReceipDate DESC 
-        LIMIT 1
-      ) AS manufacturerName,
-      (
-        SELECT IFNULL(SUM(stockReceiptsQuantityReceived), 0) 
-        FROM stockReceipts 
-        WHERE sproductCode = p.productsCode
-      ) AS totalReceived,
-      (
-        SELECT IFNULL(SUM(dispatchedQuantity), 0) 
-        FROM dispatch 
-        WHERE dProductCode = p.productsCode
-      ) AS totalDispatched
-    FROM products p
-  ''');
-
-    for (var row in result) {
-      final received = row['totalReceived'] as int? ?? 0;
-      final dispatched = row['totalDispatched'] as int? ?? 0;
-      row['currentStock'] = received - dispatched;
-    }
-
-    return result;
-  }
-
+//입고 전부 계산
+Future<int> getTotalStockIn(String productCode) async {
+  final db = await initializeDB();
+  final result = await db.rawQuery(
+    'SELECT SUM(stockReceiptsQuantityReceived) as totalIn FROM stockReceipts WHERE sproductCode = ?',
+    [productCode],
+  );
+  return result.first['totalIn'] as int? ?? 0;
+}
+// 출고 전부 계산 
+Future<int> getTotalStockOut(String productCode) async {
+  final db = await initializeDB();
+  final result = await db.rawQuery(
+    'SELECT SUM(dispatchedQuantity) as totalOut FROM dispatch WHERE dProductCode = ?',
+    [productCode],
+  );
+  return result.first['totalOut'] as int? ?? 0;
+}
+  
   // 반품 리스트 필터링
-  Future<List<Map<String, dynamic>>> loadFilteredReturns({
-    required String status,
-    DateTime? start,
-    DateTime? end,
-  }) async {
-    final db = await initializeDB();
-    String query = "SELECT * FROM return";
-    List<String> whereClauses = [];
-    List<dynamic> args = [];
+Future<List<Map<String, dynamic>>> loadFilteredReturns({
+  required String status,
+}) async {
+  final db = await initializeDB();
 
-    if (status != '전체') {
-      whereClauses.add("prosessionStateus = ?");
-      args.add(status);
-    }
+  String query = "SELECT * FROM return";
+  List<String> whereClauses = [];
+  List<dynamic> args = [];
 
-    if (start != null && end != null) {
-      whereClauses.add("returnDate BETWEEN ? AND ?");
-      args.add(DateFormat('yyyy-MM-dd').format(start));
-      args.add(DateFormat('yyyy-MM-dd').format(end));
-    }
-
-    if (whereClauses.isNotEmpty) {
-      query += " WHERE " + whereClauses.join(" AND ");
-    }
-
-    query += " ORDER BY returnDate DESC";
-    return await db.rawQuery(query, args);
+  if (status != '전체') {
+    whereClauses.add("processionStatus = ?");
+    args.add(status);
   }
 
-  //반품 내용에 해결 되는 내용을 넣을
-
-  Future<int> insertReturnInvestigation(ReturnInvestigation ri) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
-    INSERT INTO returnInvestigation (
-      raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, 
-      recordDate, resolutionDetails
-    ) VALUES (?, ?, ?, ?, ?, ?)
-    ''',
-      [
-        ri.raUserid,
-        ri.raJobGradeCode,
-        ri.rreturnCode,
-        ri.rmanufacturerName,
-        ri.recordDate.toIso8601String(),
-        ri.resolutionDetails,
-      ],
-    );
+  if (whereClauses.isNotEmpty) {
+    query += " WHERE " + whereClauses.join(" AND ");
   }
 
-  //원인규명의 내용을 저장하고 수정할 수 있는 쿼리문
-  Future<int> saveReturnInvestigation(ReturnInvestigation record) async {
-    final db = await initializeDB();
-    return await db.rawInsert(
-      '''
-    INSERT INTO returnInvestigation (
-      raUserid,
-      raJobGradeCode,
-      rreturnCode,
-      rmanufacturerName,
-      recordDate,
-      resolutionDetails
-    ) VALUES (?, ?, ?, ?, ?, ?)
-    ''',
-      [
-        record.raUserid,
-        record.raJobGradeCode,
-        record.rreturnCode,
-        record.rmanufacturerName,
-        record.recordDate.toIso8601String(),
-        record.resolutionDetails,
-      ],
-    );
-  }
+  query += " ORDER BY returnDate DESC";
 
-  //원인규명 상태 변경 쿼리문
-  Future<void> updateReturnStatus({
-    required int returnCode,
-    required String newStatus,
-  }) async {
-    final db = await initializeDB();
-    await db.rawUpdate(
-      '''
+  return await db.rawQuery(query, args);
+}
+
+
+//반품 상태 변경 쿼리문 
+Future<void> updateReturnStatus({
+  required int returnCode,
+  required String newStatus,
+}) async {
+  final db = await initializeDB();
+  await db.rawUpdate(
+    '''
     UPDATE return
-    SET prosessionStateus = ?
+    SET processionStatus = ?
     WHERE returnCode = ?
     ''',
-      [newStatus, returnCode],
-    );
-  }
+    [newStatus, returnCode],
+  );
+}
+  
 
-  //제품 등록 메소드
-  Future<int> insertProduct(Products product) async {
-    final db = await initializeDB();
-    return await db.insert('Products', {
+  
+
+  
+ //제품 등록 메소드 
+Future<int> insertProduct(Products product) async {
+  final db = await initializeDB();
+  return await db.insert(
+    'Products',
+    {
       'productsColor': product.productsColor,
       'productsName': product.productsName,
       'productsPrice': product.productsPrice,
+      'productsOPrice': product.productsOPrice,
       'productsSize': product.productsSize,
       'productsImage': product.productsImage,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
 
-  //제품 조회
-  Future<List<Products>> getAllProducts1() async {
-    final db = await initializeDB();
-    final List<Map<String, dynamic>> result = await db.query('products');
-    return result.map((item) => Products.fromMap(item)).toList();
-  }
+ 
+//제품 조회 
+Future<List<Products>> getAllProducts1() async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> result = await db.query('products');
+  return result.map((item) => Products.fromMap(item)).toList();
+}
 
   //게시글 조회
-  Future<List<ProductRegistration>> getAllProductPosts() async {
-    final db = await initializeDB();
-    final result = await db.query('productRegistration');
-    return result.map((e) => ProductRegistration.fromMap(e)).toList();
-  }
+Future<List<ProductRegistration>> getAllProductPosts() async {
+  final db = await initializeDB();
+  final result = await db.query('productRegistration');
+  return result.map((e) => ProductRegistration.fromMap(e)).toList();
+}
 
   //개시글 등록
-  Future<int> insertProductRegistration(ProductRegistration post) async {
+//개시글 등록
+ Future<int> insertProductRegistration(ProductRegistration post) async {
     final db = await initializeDB();
-    return await db.insert('productRegistration', {
-      'paUserid': post.paUserid,
-      'pProductCode': post.pProductCode,
-      'introductionPhoto': post.introductionPhoto,
-      'ptitle': post.ptitle,
-      'contentJson': jsonEncode(
-        post.contentBlocks.map((e) => e.toMap()).toList(),
-      ),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'productRegistration',
+      {
+        'paUserid': post.paUserid,
+        'pProductCode': post.pProductCode,
+        'introductionPhoto': post.introductionPhoto,
+        'ptitle': post.ptitle,
+        'contentJson': jsonEncode(post.contentBlocks.map((e) => e.toMap()).toList()),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   //같은 제품의 게시글이 올라가 있는지 확인
@@ -681,25 +550,25 @@ class DatabaseHandler {
     }
   }
 
-  //제품 이름으로 검색
-  Future<List<String>> getDistinctProductNames() async {
-    final db = await initializeDB();
-    final result = await db.rawQuery(
-      'SELECT DISTINCT productsName FROM products ORDER BY productsName',
-    );
-    return result.map((e) => e['productsName'].toString()).toList();
-  }
+  //제품 이름으로 검색 
+Future<List<String>> getDistinctProductNames() async {
+  final db = await initializeDB();
+  final result = await db.rawQuery(
+    'SELECT DISTINCT productsName FROM products ORDER BY productsName'
+  );
+  return result.map((e) => e['productsName'].toString()).toList();
+}
 
-  //재품 이름 함수 2
-  Future<List<Products>> getProductsByName(String name) async {
-    final db = await initializeDB();
-    final List<Map<String, dynamic>> result = await db.query(
-      'products',
-      where: 'productsName = ?',
-      whereArgs: [name],
-    );
-    return result.map((item) => Products.fromMap(item)).toList();
-  }
+ //재품 이름 함수 2
+Future<List<Products>> getProductsByName(String name) async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> result = await db.query(
+    'products',
+    where: 'productsName = ?',
+    whereArgs: [name],
+  );
+  return result.map((item) => Products.fromMap(item)).toList();
+}
 
   // ------------------Product----------------------- //
   // customer_product_list.dart : product list (query)
@@ -1436,5 +1305,409 @@ class DatabaseHandler {
 
   return dispatched - purchased;
 }
-  // ------------------------------ //
-} // class
+
+//제조사 추가
+Future<int> insertManufacturer(Manufacturers manufacturer) async {
+  final db = await initializeDB();
+  return await db.insert(
+    'manufacturers',
+    {'manufacturerName': manufacturer.manufacturerName},
+    conflictAlgorithm: ConflictAlgorithm.ignore, // 중복 방지
+  );
+}
+//제조사 검색 
+Future<List<String>> getManufacturers1() async {
+  final db = await initializeDB();
+  final result = await db.rawQuery("SELECT DISTINCT manufacturerName FROM manufacturers");
+  return result.map((e) => e['manufacturerName'].toString()).toList();
+}
+//출고 대리점과 같은거 찾기 
+Future<List<int>> getPendingOrderIdsForDispatch(int productCode, String storeCode) async {
+  final db = await initializeDB();
+  final result = await db.rawQuery(
+    '''
+    SELECT purchaseId FROM purchase 
+    WHERE oproductCode = ? 
+      AND pStoreCode = ? 
+      AND purchaseDeliveryStatus = '주문완료'
+    ''',
+    [productCode.toString(), storeCode],
+  );
+
+  return result
+      .map((row) {
+        final rawId = row['purchaseId'];
+        if (rawId is int) return rawId;
+        if (rawId is String) return int.tryParse(rawId) ?? -1;
+        return -1;
+      })
+      .where((id) => id != -1)
+      .toList();
+}
+
+//주문 정보 가지고 오기 
+Future<Purchase?> getPurchaseById(int purchaseId) async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> result = await db.query(
+    'purchase',
+    where: 'purchaseId = ?',
+    whereArgs: [purchaseId],
+  );
+
+  if (result.isNotEmpty) {
+    return Purchase.formMap(result.first);
+  }
+  return null;
+}
+//입고 리스트 
+Future<List<Map<String, dynamic>>> getAllStockReceipts() async {
+  final db = await initializeDB();
+  return await db.rawQuery('''
+    SELECT * FROM stockReceipts
+  ''');
+}
+//출고 리스트
+Future<List<Map<String, dynamic>>> getAllDispatches() async {
+  final db = await initializeDB();
+  return await db.rawQuery('''
+    SELECT d.*, s.storeName
+    FROM dispatch d
+    LEFT JOIN store s ON d.dstoreCode = s.storeCode
+  ''');
+}
+
+//직급 찾는 메소드 
+  Future<String> getJobGradeByUserId(String userId) async {
+  final db = await initializeDB();
+  final result = await db.query(
+    'affiliation',
+    where: 'aUserid = ?',
+    whereArgs: [userId],
+    limit: 1,
+  );
+  return result.isNotEmpty ? result.first['aJobGradeCode'] as String : '';
+}
+// 원가 가격을 들고오는 메소드
+Future<int> getProductOPriceByCode(int code) async {
+  final db = await initializeDB();
+  final result = await db.query(
+    'products',
+    columns: ['productsOPrice'],
+    where: 'productsCode = ?',
+    whereArgs: [code],
+  );
+
+  if (result.isNotEmpty && result.first['productsOPrice'] != null) {
+    return result.first['productsOPrice'] as int;
+  } else {
+    return 0; // 기본값 또는 오류 처리
+  }
+}
+//직급 들고오기 
+Future<List<Grade>> getAllGrades() async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> result = await db.query('grade');
+
+  return result.map((map) => Grade.fromMap(map)).toList();
+}
+//orderid 구하는거 
+Future<int> getNextOrderId() async {
+  final db = await initializeDB();
+  final result = await db.rawQuery('SELECT MAX(orderID) as maxId FROM Orders');
+
+  if (result.isEmpty || result.first['maxId'] == null) {
+    return 1; // 조회 결과가 없으면 1로 시작
+  }
+
+  final maxId = result.first['maxId'] as int;
+  return maxId + 1;
+}
+Future<Map<String, String>> getUserInfoById(String userId) async {
+  final db = await initializeDB();
+  final result = await db.query(
+    'Users',
+    columns: ['name'],
+    where: 'userid = ?',
+    whereArgs: [userId],
+  );
+  if (result.isNotEmpty) {
+    return {
+      'name': result.first['name'].toString(),
+    };
+  } else {
+    throw Exception('사용자 정보를 찾을 수 없습니다.');
+  }
+}
+
+//발주서 등록
+Future<void> insertCreateApprovalDocument(CreateApprovalDocument doc) async {
+  final db = await initializeDB();
+  await db.insert(
+    'createApprovalDocument', // ✅ 테이블 이름 맞춤
+    {
+      'cuserid': doc.cUserid,
+      'cajobGradeCode': doc.cajobGradeCode,
+      'name': doc.name,
+      'title': doc.title,
+      'content': doc.content,
+      'date': doc.date.toIso8601String(),
+      'approvalStatus': doc.approvalStatus,
+      'approvalRequestExpense': doc.approvalRequestExpense,
+      'corderID': doc.corderID,
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
+
+//발주 등록
+Future<void> insertOrder(Orders order) async {
+  final db = await initializeDB();
+  await db.insert(
+    'Orders',
+    {
+      'orderID': order.orderID,
+      'orderQuantity': order.orderQuantity,
+      'orderStatus': order.orderStatus,
+      'orderPrice': order.orderPrice,
+      'oajobGradCode': order.oajobGradCode,
+      'oaUserid': order.oaUserid,
+      'oproductCode': order.oproductCode,
+      'omamufacturer': order.omamufacturer,
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
+//결재선 아이디 찾기 
+Future<String?> getGradeCodeByName(String gradeName) async {
+  final db = await initializeDB(); 
+  final result = await db.query(
+    'grade', // 
+    columns: ['jobGradeCode'], 
+    where: 'gradeName = ?',
+    whereArgs: [gradeName],
+  );
+  if (result.isNotEmpty) {
+    return result.first['jobGradeCode'].toString(); 
+  }
+  return null;
+}
+//결재서 단계 입렵
+
+Future<void> insertApprovalSteps({
+  required int documentId,
+  required int requesterGrade,
+  required int finalGrade,
+}) async {
+  final db = await initializeDB();
+
+  final gradeResult = await db.query(
+    'grade',
+    where: 'jobGradeCode > ? AND jobGradeCode <= ?',
+    whereArgs: [requesterGrade, finalGrade],
+    orderBy: 'jobGradeCode ASC',
+  );
+
+  int step = 1;
+  for (final grade in gradeResult) {
+    final gradeCode = grade['jobGradeCode'].toString();
+
+    final userResult = await db.query(
+      'affiliation',
+      where: 'aJobGradeCode = ?',
+      whereArgs: [gradeCode],
+      limit: 1,
+    );
+
+    if (userResult.isNotEmpty) {
+      final approverId = userResult.first['aUserid'].toString();
+
+      await db.insert('approvalstep', {
+        'documentId': documentId,
+        'stepOrder': step,
+        'approverId': approverId,
+        'status': '대기',
+        'comment': null,
+        'actionDate': null,
+      });
+      step++;
+    }
+  }
+}
+//결재 승인 
+Future<List<Map<String, dynamic>>> getApprovalStepsByDocumentId(int documentId) async {
+  final db = await initializeDB();
+  final result = await db.query(
+    'approvalstep',
+    where: 'documentId = ?',
+    whereArgs: [documentId],
+    orderBy: 'stepOrder ASC',
+  );
+  return result;
+}
+//승인 끝나면 발주완료 
+Future<void> finalizeApproval({required int documentId}) async {
+  final db = await initializeDB();
+
+  // 1. 결재서 상태를 '승인'으로 변경
+  await db.update(
+    'createApprovalDocument',
+    {'approvalStatus': '승인'},
+    where: 'corderID = ?',
+    whereArgs: [documentId],
+  );
+
+  await db.update(
+    'orders',
+    {'orderStatus': '발주완료'},
+    where: 'orderID = ?',
+    whereArgs: [documentId],
+  );
+}
+//승인 상태 변경 
+Future<void> approveStep({
+  required int documentId,
+  required String approverId,
+}) async {
+  final db = await initializeDB();
+
+  // 1. 모든 단계 로드
+  final steps = await db.query(
+    'approvalstep',
+    where: 'documentId = ?',
+    whereArgs: [documentId],
+    orderBy: 'stepOrder ASC',
+  );
+
+  // 2. 첫 번째 '대기' 상태인 단계를 찾는다
+  final pendingStep = steps.firstWhere(
+    (step) => step['status'] == '대기',
+    orElse: () => {},
+  );
+
+  // 3. 승인 요청자가 현재 차례가 아닐 경우 예외
+  if (pendingStep.isEmpty || pendingStep['approverId'] != approverId) {
+    throw Exception('승인할 수 있는 단계가 아닙니다.');
+  }
+
+  // 4. 해당 단계를 승인 처리
+  await db.update(
+    'approvalstep',
+    {
+      'status': '승인',
+      'actionDate': DateTime.now().toIso8601String(),
+    },
+    where: 'documentId = ? AND approverId = ?',
+    whereArgs: [documentId, approverId],
+  );
+}
+
+//반려 했을 때 
+Future<void> rejectStep({
+  required int documentId,
+  required String approverId,
+  required String comment,
+}) async {
+  final db = await initializeDB();
+
+  // 1. 해당 단계 상태를 반려로 설정
+  await db.update(
+    'approvalstep',
+    {
+      'status': '반려',
+      'comment': comment,
+      'actionDate': DateTime.now().toIso8601String(),
+    },
+    where: 'documentId = ? AND approverId = ?',
+    whereArgs: [documentId, approverId],
+  );
+
+  // 2. 결재서 자체 상태도 반려로 설정
+  await db.update(
+    'createApprovalDocument',
+    {
+      'approvalStatus': '반려',
+    },
+    where: 'corderID = ?',
+    whereArgs: [documentId],
+  );
+}
+
+
+//승인 진행중 
+Future<void> updateApprovalDocumentStatus({
+  required int documentId,
+  required String newStatus,
+}) async {
+  final db = await initializeDB();
+  await db.update(
+    'createApprovalDocument',
+    {
+      'approvalStatus': newStatus,
+    },
+    where: 'corderID = ?',
+    whereArgs: [documentId],
+  );
+}//발주 리스트 
+Future<List<Map<String, dynamic>>> getAllOrders() async {
+  final db = await initializeDB();
+  final result = await db.rawQuery('''
+    SELECT o.*, p.productsName
+    FROM orders o
+    LEFT JOIN products p ON o.oproductCode = p.productsCode
+    ORDER BY o.orderID DESC
+  ''');
+  return result;
+}
+
+//발주 리스트 검색 
+Future<List<Map<String, dynamic>>> getOrderList({String? productName}) async {
+  final db = await initializeDB();
+  String query = '''
+    SELECT o.*, p.productsName 
+    FROM orders o
+    LEFT JOIN products p ON o.oproductCode = p.productsCode
+  ''';
+
+  List<String> where = [];
+  List<dynamic> args = [];
+
+  if (productName != null && productName.isNotEmpty) {
+    where.add("p.productsName LIKE ?");
+    args.add('%$productName%');
+  }
+
+  if (where.isNotEmpty) {
+    query += ' WHERE ' + where.join(' AND ');
+  }
+
+  query += ' ORDER BY o.orderID DESC';
+
+  return await db.rawQuery(query, args);
+}
+//원인규명 
+Future<void> insertReturnInvestigation({
+  required String raUserid,
+  required String raJobGradeCode,
+  required int rreturnCode,
+  required String rmanufacturerName,
+  required String recordDate,
+  required String resolutionDetails,
+}) async {
+  final db = await initializeDB();
+  await db.insert(
+    'returnInvestigation',
+    {
+      'raUserid': raUserid,
+      'raJobGradeCode': raJobGradeCode,
+      'rreturnCode': rreturnCode,
+      'rmanufacturerName': rmanufacturerName,
+      'recordDate': recordDate,
+      'resolutionDetails': resolutionDetails,
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
+
+
+}// class
+

@@ -227,8 +227,8 @@ class _StoreProductConditionState extends State<StoreProductCondition> {
       for (var order in changedOrders) {
         final int? purchaseId = order.orderData['purchaseId'] as int?;
         if (purchaseId != null) {
-          await DatabaseHandler().updatePurchaseDeliveryStatus(
-            purchaseId.toString(),
+          await DatabaseHandler().updatePurchaseDeliveryStatus1(
+            purchaseId,
             order.currentStatus,
           );
           order.originalStatus = order.currentStatus;

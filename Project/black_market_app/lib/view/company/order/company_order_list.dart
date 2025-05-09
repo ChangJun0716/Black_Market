@@ -18,7 +18,7 @@ class _CompanyOrderListState extends State<CompanyOrderList> {
   DateTime? startDate;
   DateTime? endDate;
 
-  final List<String> statusOptions = ['전체', '신청됨', '승인됨', '반려됨'];
+  final List<String> statusOptions = ['전체', '승인신청', '승인진행중', '반려','승인'];
 
   @override
   void initState() {
@@ -36,27 +36,19 @@ class _CompanyOrderListState extends State<CompanyOrderList> {
     setState(() {});
   }
 
-  Future<void> pickDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        startDate = picked.start;
-        endDate = picked.end;
-      });
-      loadApprovals();
-    }
-  }
+  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("결재 리스트"),
+        title: const Text("결재 리스트",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        ),
         backgroundColor: Colors.black,
       ),
       body: Column(
@@ -79,10 +71,7 @@ class _CompanyOrderListState extends State<CompanyOrderList> {
                   },
                 ),
                 const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: pickDateRange,
-                  child: const Text("날짜 선택"),
-                )
+                
               ],
             ),
           ),
@@ -120,7 +109,11 @@ class _CompanyOrderListState extends State<CompanyOrderList> {
 
                   return GestureDetector(
                     onTap: () {
-                      Get.to(() => CompanyOrderDetail(approvalData: doc));
+                      Get.to(() => CompanyOrderDetail(approvalData: doc))!.then((Value)=>{
+                        loadApprovals(),
+                        setState(() {
+                        
+                      })});
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
