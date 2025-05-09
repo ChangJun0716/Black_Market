@@ -1,148 +1,113 @@
-// CompanyCreateAccount.dart
-import 'package:black_market_app/message/custom_dialogue.dart';
-import 'package:black_market_app/message/custom_snackbar.dart';
-import 'package:black_market_app/model/users.dart'; // Users 모델 사용
-import 'package:black_market_app/utility/custom_button.dart'; // CustomButton 사용
-import 'package:black_market_app/utility/custom_button_calender.dart'; // CustomButtonCalender 사용
-import 'package:black_market_app/utility/custom_textfield.dart'; // CustomTextField 사용
-import 'package:black_market_app/vm/database_handler.dart'; // DatabaseHandler 사용
+// company_create_account.dart
+import 'package:black_market_app/model/users.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // GetX 임포트
-import 'company_create_store.dart'; // CompanyCreateStore 페이지 임포트
+import 'package:get/get.dart'; // GetX 임포트 (Snackbar, Navigator 등 사용)
+import 'package:get_storage/get_storage.dart'; // GetStorage 사용 (선택 사항, 여기서는 직접 사용 안 함)
+// DatabaseHandler 임포트 (경로에 맞게 수정 필요)
+import 'package:black_market_app/vm/database_handler.dart';
+// Custom 위젯 임포트 (경로에 맞게 수정 필요)
+import 'package:black_market_app/utility/custom_textfield.dart';
+import 'package:black_market_app/utility/custom_button.dart';
+import 'package:black_market_app/message/custom_snackbar.dart'; // CustomSnackbar 사용
 
 class CompanyCreateAccount extends StatefulWidget {
-  // 이름 그대로 사용
   const CompanyCreateAccount({super.key});
 
   @override
-  State<CompanyCreateAccount> createState() => _CompanyCreateAccountState(); // State 이름 그대로 사용
+  State<CompanyCreateAccount> createState() => _CompanyCreateAccountState();
 }
 
 class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
-  // State 이름 그대로 사용
   late DatabaseHandler handler;
-  late TextEditingController idCon;
-  late TextEditingController pwCon;
-  late TextEditingController nameCon;
-  late TextEditingController genderCon;
-  late TextEditingController phoneCon;
-  late String birthDate; // 'YYYY-MM-DD' 형식 문자열로 저장
-  late bool idCheck; // 사용자 ID 중복 확인 상태
 
-  // CompanyCreateStore에서 받아올 대리점 정보 상태 변수
-  Map<String, dynamic>?
-  _registeredStoreInfo; // 등록된 대리점 정보 (storeCode, storeName)
+  // 입력 필드 컨트롤러
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _birthDateController =
+      TextEditingController(); // 생년월일
+  final TextEditingController _genderController = TextEditingController(); // 성별
+
+  // 회원 유형 (memberType) - 이 페이지에서는 대리점 관리자 (3)로 고정
+  final int _selectedMemberType = 3; // 대리점 관리자로 고정
+
+  // 대리점 목록 및 선택 상태
+  List<Map<String, dynamic>> _stores = []; // 데이터베이스에서 가져온 대리점 목록
+  String? _selectedStoreCode; // 드롭다운에서 선택된 대리점 코드
+  bool _isLoadingStores = true; // 대리점 목록 로딩 상태
+
+  // 드롭다운 힌트 텍스트
+  static const String SELECT_STORE_HINT = '소속 대리점을 선택하세요';
 
   @override
   void initState() {
     super.initState();
     handler = DatabaseHandler(); // 핸들러 인스턴스 생성
-    idCon = TextEditingController();
-    pwCon = TextEditingController();
-    nameCon = TextEditingController();
-    genderCon = TextEditingController();
-    phoneCon = TextEditingController();
-    birthDate = ''; // 초기값은 빈 문자열
-    idCheck = false; // 사용자 ID 중복 확인 초기 상태
-    _registeredStoreInfo = null; // 등록된 대리점 정보 초기값
+
+    // 페이지 로드 시 대리점 목록 가져오기 시작
+    _fetchStores();
   }
 
   @override
   void dispose() {
     // 컨트롤러 메모리 해제
-    idCon.dispose();
-    pwCon.dispose();
-    nameCon.dispose();
-    genderCon.dispose();
-    phoneCon.dispose();
+    _idController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _birthDateController.dispose();
+    _genderController.dispose();
     super.dispose();
   }
 
   // ------------ functions ---------------- //
-  // 사용자 ID 중복 확인 액션
-  void idDoubleCheck(String id) async {
-    // 입력된 ID 유효성 검사 (비어 있는지 등)
-    if (id.trim().isEmpty) {
-      Get.snackbar(
-        '오류',
-        '아이디를 입력해주세요.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return; // 함수 종료
-    }
 
-    // 이미 중복 확인을 완료했으면 다시 확인하지 않음
-    if (idCheck) {
-      Get.snackbar(
-        '확인 완료',
-        '이미 중복 확인된 아이디입니다.',
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      return; // 함수 종료
-    }
-
+  // 모든 대리점 목록을 가져오는 메서드
+  Future<void> _fetchStores() async {
+    // 반환 타입을 Future<void>로 명시
     try {
-      int count = await handler.idDoubleCheck(id);
-      if (count == 0) {
-        // 중복 없음
-        CustomDialogue().showDialogue(
-          title: '확인 완료',
-          middleText: '이 아이디를 사용 하시겠습니까?',
-          cancelText: "취소",
-          onCancel: () => Get.back(), // Get.back() 사용
-          confirmText: '사용하기',
-          onConfirm: () {
-            setState(() {
-              idCheck = true; // ID 사용 가능 상태로 변경
-            });
-            Get.snackbar(
-              '성공',
-              '사용 가능한 아이디입니다.',
-              backgroundColor: Colors.green,
-              colorText: Colors.white,
-            );
-          },
-        );
-      } else {
-        // 중복 있음
-        Get.snackbar(
-          '오류',
-          '이미 사용 중인 아이디입니다.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        setState(() {
-          idCheck = false; // 중복 확인 상태 초기화
-          idCon.clear(); // 아이디 필드 초기화 (선택 사항)
-        });
-      }
+      // DatabaseHandler에서 모든 대리점 목록 가져오기
+      final fetchedStores = await handler.getAllStores();
+
+      setState(() {
+        _stores = fetchedStores; // 대리점 목록 업데이트
+        _isLoadingStores = false; // 로딩 완료
+        // _selectedStoreCode는 초기값 null 상태
+      });
+      print('>>> 대리점 목록 로딩 완료: ${_stores.length} 개'); // 로깅
     } catch (e) {
-      // 데이터베이스 작업 중 예외 발생
-      print('ID 중복 확인 중 오류 발생: $e');
+      print('>>> 대리점 목록 가져오는 중 오류 발생: ${e.toString()}'); // 로깅
+      setState(() {
+        _isLoadingStores = false; // 로딩 완료 (오류 발생 시)
+        _stores = []; // 오류 시 목록 초기화
+      });
       Get.snackbar(
         '오류',
-        'ID 중복 확인 중 오류가 발생했습니다.',
+        '대리점 목록을 가져오는데 실패했습니다: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
   }
 
-  // --------------------------------------- //
-  // 사용자 계정 + 대리점 소속 등록 액션
-  void _createUserAndAffiliate() async {
-    // 메서드 이름 변경 (사용자 계정 및 소속 등록)
-    // 입력 값 유효성 검사 (필수 필드 확인)
-    if (idCon.text.trim().isEmpty ||
-        pwCon.text.trim().isEmpty ||
-        nameCon.text.trim().isEmpty ||
-        phoneCon.text.trim().isEmpty ||
-        genderCon.text.trim().isEmpty ||
-        birthDate
-            .isEmpty // 빈 문자열인지 확인
-            ) {
+  // 계정 생성 액션
+  void _createAccount() async {
+    // 입력 값 가져오기
+    final userid = _idController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final birthDate = _birthDateController.text.trim();
+    final gender = _genderController.text.trim(); // 성별 입력 방식에 따라 수정 필요
+
+    // 필수 필드 검증 (대리점 선택 포함)
+    if (userid.isEmpty ||
+        password.isEmpty ||
+        name.isEmpty ||
+        phone.isEmpty ||
+        birthDate.isEmpty ||
+        gender.isEmpty) {
       Get.snackbar(
         '오류',
         '모든 필수 정보를 입력해주세요.',
@@ -152,289 +117,295 @@ class _CompanyCreateAccountState extends State<CompanyCreateAccount> {
       return; // 함수 종료
     }
 
-    // ID 중복 확인이 완료되었는지 확인
-    if (!idCheck) {
+    // 대리점 회원이므로 소속 대리점 선택 필수 검증
+    if (_selectedStoreCode == null) {
+      // 드롭다운에서 대리점이 선택되지 않은 경우
       Get.snackbar(
         '오류',
-        '아이디 중복 확인을 먼저 해주세요.',
+        '소속 대리점을 선택해야 합니다.',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
       return; // 함수 종료
     }
 
-    // 등록할 대리점 정보가 있는지 확인
-    if (_registeredStoreInfo == null) {
-      Get.snackbar(
-        '오류',
-        '소속 대리점을 등록 또는 선택 해주세요.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return; // 함수 종료
-    }
-
-    // Users 객체 생성 (memberType은 요구사항에 따라 설정)
-    var newUser = Users(
-      // 변수명 변경
-      userid: idCon.text,
-      password: pwCon.text,
-      name: nameCon.text,
-      phone: phoneCon.text,
-      memberType: 3, // 예시: 대리점장 memberType. 실제 값 확인 및 설정 필요.
-      birthDate: birthDate, // YYYY-MM-DD 형식 문자열
-      gender: genderCon.text,
-    );
-
-    // 등록된 대리점 코드 가져오기
-    final String storeCode = _registeredStoreInfo!['storeCode']; // null 아님 보장
-
+    // 사용자 ID 중복 체크
     try {
-      print('>>> 사용자 정보 삽입 시도: ${newUser.userid}'); // 로깅 추가
-      // 1. users 테이블에 사용자 정보 삽입
-      int userInsertResult = await handler.insertUserInfo(newUser); // 변수명 변경
-      print('>>> 사용자 정보 삽입 결과 (rowId): $userInsertResult'); // 로깅 추가
+      int idCount = await handler.idDoubleCheck(userid);
+      if (idCount > 0) {
+        Get.snackbar(
+          '오류',
+          '이미 사용 중인 아이디입니다.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return; // 함수 종료
+      }
+    } catch (e) {
+      print('아이디 중복 체크 중 오류 발생: ${e.toString()}');
+      Get.snackbar(
+        '오류',
+        '아이디 중복 체크 중 오류가 발생했습니다.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return; // 함수 종료
+    }
+
+    // 사용자 정보 Map 형태로 준비 (DB insert 메서드는 Map을 받도록 설계)
+    // users 테이블 스키마에 맞춰 키 이름 사용: userid, password, name, phone, memberType, birthDate, gender
+    final userData = {
+      'userid': userid,
+      'password': password,
+      'name': name,
+      'phone': phone,
+      'memberType': _selectedMemberType, // 대리점 관리자 (3)로 고정
+      'birthDate': birthDate,
+      'gender': gender,
+    };
+
+    // 데이터베이스에 사용자 기록 삽입 (users 테이블)
+    try {
+      print('>>> 사용자 삽입 시도 (memberType 3): $userData'); // 로깅 추가
+      // DatabaseHandler의 insertUserInfo 메서드를 호출
+      int userInsertResult = await handler.insertUserInfo(
+        Users.fromMap(userData),
+      ); // Users 객체로 변환하여 삽입
+      print('>>> 사용자 삽입 결과 (rowId): $userInsertResult'); // 로깅 추가
 
       if (userInsertResult > 0) {
-        // 사용자 정보 삽입 성공 (반환된 row ID가 0보다 크면 성공)
-        print('>>> 사용자 정보 삽입 성공. 소속 정보 삽입 시도.'); // 로깅 추가
-        // 사용자 정보 삽입 성공 시 daffiliation 테이블에 소속 정보 삽입
-        // 2. daffiliation 테이블에 대리점-사용자 소속 정보 삽입
-        int daffiliationInsertResult = await handler.insertDaffiliation(
-          storeCode, // CompanyCreateStore에서 받아온 대리점 코드
-          newUser.userid, // 새로 생성된 사용자 ID
-        );
-        print('>>> 소속 정보 삽입 결과 (rowId): $daffiliationInsertResult'); // 로깅 추가
+        // 사용자 삽입 성공
+        print('>>> 사용자 성공적으로 삽입됨. UserID: $userid'); // 로깅 추가
 
-        if (daffiliationInsertResult > 0) {
-          // 소속 정보 삽입 성공
-          print('>>> 사용자 및 소속 정보 모두 성공적으로 삽입됨.'); // 로깅 추가
-          // 두 테이블 모두 삽입 성공
-          Get.snackbar(
-            '등록 성공',
-            '${newUser.name} 사용자 계정 및 ${_registeredStoreInfo!['storeName']} 소속 등록이 완료되었습니다.', // 메시지 수정
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
+        // daffiliation 테이블에 연결 정보 삽입 (대리점 코드는 필수로 선택됨)
+        print(
+          '>>> daffiliation 삽입 시도: dstoreCode=$_selectedStoreCode, duserId=$userid',
+        ); // 로깅 추가
+        try {
+          // DatabaseHandler의 insertDaffiliation 메서드를 호출
+          int daffiliationInsertResult = await handler.insertDaffiliation(
+            _selectedStoreCode!,
+            userid,
           );
-          // 성공 시 입력 필드 초기화 및 상태 재설정
-          idCon.clear();
-          pwCon.clear();
-          nameCon.clear();
-          genderCon.clear();
-          phoneCon.clear();
-          setState(() {
-            birthDate = ''; // 생년월일 초기화 (CustomButtonCalender 초기화 로직 필요)
-            idCheck = false; // ID 중복 확인 상태 초기화
-            _registeredStoreInfo = null; // 등록된 대리점 정보 초기화
-          });
-          // TODO: CustomButtonCalender 텍스트도 초기화하는 로직 추가 필요
+          print(
+            '>>> daffiliation 삽입 결과 (rowId): $daffiliationInsertResult',
+          ); // 로깅 추가
 
-          // 필요하다면 다음 단계 페이지로 이동하거나 그냥 둘 수 있습니다.
-          // Get.back();
-        } else {
-          // 소속 삽입 실패
-          print('>>> 사용자 정보는 삽입되었으나, 소속 정보 삽입 실패.'); // 로깅 추가
-          // TODO: users 테이블에 삽입된 정보 롤백 고려 (복잡해질 수 있음)
+          if (daffiliationInsertResult > 0) {
+            print('>>> daffiliation 성공적으로 삽입됨.'); // 로깅 추가
+            // 사용자 및 daffiliation 삽입 모두 성공
+            Get.snackbar(
+              '등록 성공',
+              '대리점 회원 계정 등록 및 대리점 연결 성공.',
+              backgroundColor: Colors.green,
+              colorText: Colors.white,
+            );
+            // 성공 시 입력 필드 초기화 및 상태 재설정
+            _clearFields();
+            // 필요하다면 다른 페이지로 이동
+            // Get.back();
+          } else {
+            // daffiliation 삽입 실패 (무시 ConflictAlgorithm.ignore에 의해 실패 시 0 또는 -1 반환 가능)
+            print('>>> daffiliation 삽입 실패 (이미 존재할 수 있음 또는 다른 원인).'); // 로깅 추가
+            Get.snackbar(
+              '등록 완료 (주의)',
+              '사용자 등록은 성공했으나 대리점 연결에 실패했거나 이미 존재합니다.', // 사용자 등록은 성공했음을 알림
+              backgroundColor: Colors.orange,
+              colorText: Colors.white,
+            );
+            _clearFields(); // 사용자 등록은 성공했으므로 필드는 초기화
+          }
+        } catch (e) {
+          // daffiliation 삽입 중 예외 발생
+          print(
+            '>>> daffiliation 삽입 중 예외 발생: ${e.toString()}',
+          ); // 오류 메시지 포함 로깅 추가
           Get.snackbar(
-            '등록 실패',
-            '사용자 계정 등록은 완료되었으나, 소속 대리점 등록에 실패했습니다.',
+            '등록 완료 (오류)',
+            '사용자 등록은 성공했으나 대리점 연결 중 오류 발생: ${e.toString()}',
             backgroundColor: Colors.red,
             colorText: Colors.white,
           );
+          _clearFields(); // 사용자 등록은 성공했으므로 필드는 초기화
         }
       } else {
         // 사용자 삽입 실패 (insertUserInfo 결과 <= 0)
-        print('>>> 사용자 정보 삽입 실패 (insertUserInfo 결과 <= 0).'); // 로깅 추가
-        // users 테이블 삽입 실패
+        print('>>> 사용자 삽입 실패 (insertUserInfo 결과 <= 0).'); // 로깅 추가
+        // 사용자 삽입 실패
         Get.snackbar(
           '등록 실패',
-          '사용자 계정 등록에 실패했습니다.',
+          '계정 등록에 실패했습니다.',
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      // 데이터베이스 작업 중 예외 발생 (users 또는 daffiliation 삽입 시)
-      print('>>> 데이터베이스 작업 중 예외 발생: ${e.toString()}'); // 오류 메시지 포함 로깅 추가
+      // 데이터베이스 작업 중 예외 발생 (users 삽입 시)
+      print('>>> 사용자 삽입 중 예외 발생: ${e.toString()}'); // 오류 메시지 포함 로깅 추가
       // 데이터베이스 작업 중 예외 발생
       Get.snackbar(
         '오류',
-        '등록 중 오류가 발생했습니다: ${e.toString()}', // 오류 메시지 포함
+        '계정 등록 중 오류가 발생했습니다: ${e.toString()}', // 오류 메시지 포함
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
   }
 
-  // 새 대리점 등록 페이지로 이동하고 결과를 받아오는 메서드
-  void _navigateToCreateStorePage() async {
-    // CompanyCreateStore 페이지로 이동하고 결과를 기다림 (Get.to 사용)
-    final result = await Get.to(() => CompanyCreateStore());
-
-    // result가 Map<String, dynamic> 형태인지 확인하고 업데이트
-    if (result != null &&
-        result is Map<String, dynamic> &&
-        result.containsKey('storeCode') &&
-        result.containsKey('storeName')) {
-      print('>>> CompanyCreateStore에서 유효한 결과 받음: $result'); // 로깅 추가
-      setState(() {
-        _registeredStoreInfo = result; // 받아온 대리점 정보 저장
-        // 대리점 정보가 선택/등록되면 사용자 계정 정보는 유지합니다.
-        // idCheck 상태는 그대로 유지하는 것이 좋습니다.
-      });
-      Get.snackbar(
-        // 사용자에게 대리점 선택/등록 완료 알림
-        '대리점 선택 완료',
-        '${_registeredStoreInfo!['storeName']} 대리점이 선택되었습니다.',
-        backgroundColor: Colors.blueAccent,
-        colorText: Colors.white,
-      );
-    } else {
-      print('>>> CompanyCreateStore에서 유효하지 않거나 null 결과 받음: $result'); // 로깅 추가
-      // 대리점 등록/선택이 취소되었거나 유효하지 않은 결과일 때
-      // 현재 선택된 대리점 정보(_registeredStoreInfo)를 그대로 유지합니다.
-      // 상태를 변경하지 않으므로 setState 호출 필요 없음
-
-      // 사용자에게 대리점 선택 취소 알림 (선택 사항, 뒤로 가기 시 매번 뜰 수 있음)
-      // Get.snackbar(
-      //    '알림',
-      //    '대리점 선택이 취소되었습니다.',
-      //    backgroundColor: Colors.grey,
-      //    colorText: Colors.white,
-      // );
-    }
+  // 입력 필드 초기화 메서드
+  void _clearFields() {
+    _idController.clear();
+    _passwordController.clear();
+    _nameController.clear();
+    _phoneController.clear();
+    _birthDateController.clear();
+    _genderController.clear();
+    setState(() {
+      _selectedStoreCode = null; // 선택된 대리점 초기화
+      // _selectedMemberType은 3으로 고정이므로 초기화 불필요
+    });
   }
 
   @override
-  Widget build(context) {
-    // GetX 사용을 위해 context 대신 build(context) 사용
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('사용자 계정 등록'), // 제목 (대리점장 사용자 등록 의미)
+        title: Text('대리점 회원 계정 생성 (본사)'), // 제목 변경
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         // 스크롤 가능하도록 SingleChildScrollView 추가
-        padding: const EdgeInsets.all(16.0), // 패딩 추가
+        padding: const EdgeInsets.all(16.0), // 전체 패딩
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch, // 가로로 늘이기
           children: [
-            // 새 대리점 등록 페이지 이동 버튼
-            // 대리점 정보가 이미 등록/선택되었으면 버튼 텍스트 변경 또는 비활성화 고려 가능
-            Align(
-              alignment: Alignment.centerRight, // 오른쪽 정렬
-              child: ElevatedButton.icon(
-                // 아이콘 포함 버튼
-                onPressed: _navigateToCreateStorePage, // 널이 아닌 함수 전달
-                icon: Icon(Icons.store_mall_directory),
-                // 이미 선택된 대리점이 있다면 텍스트 변경
-                label: Text(
-                  _registeredStoreInfo == null ? '소속 대리점 등록/선택' : '소속 대리점 변경',
-                ), // 텍스트 수정
-              ),
+            // TextField: 아이디
+            Text(
+              '아이디',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16), // 간격 추가
-            // 선택된 대리점 정보 표시
-            if (_registeredStoreInfo != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  '선택된 대리점: ${_registeredStoreInfo!['storeName']} (${_registeredStoreInfo!['storeCode']})',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ),
-            if (_registeredStoreInfo == null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  '소속 대리점 정보를 등록 또는 선택해주세요.', // 텍스트 수정
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-            SizedBox(height: 16), // 간격 추가
-            // textField : ID
+            SizedBox(height: 8),
+            CustomTextField(label: '아이디 입력 (중복 확인)', controller: _idController),
+            SizedBox(height: 16),
+
+            // TextField: 비밀번호
+            Text(
+              '비밀번호',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
             CustomTextField(
-              label: '아이디를 입력 하세요',
-              controller: idCon,
-              readOnly: idCheck, // 중복 확인 완료 후 수정 불가
+              label: '비밀번호 입력',
+              controller: _passwordController,
+              obscureText: true,
             ),
-            SizedBox(height: 8), // 간격 추가
-            // button : ID 중복 체크
-            Align(
-              // 버튼 정렬
-              alignment: Alignment.centerRight, // 오른쪽 정렬 예시
-              // CustomButton의 onPressed에 항상 널이 아닌 함수 전달
+            SizedBox(height: 16),
+
+            // TextField: 이름
+            Text(
+              '이름',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            CustomTextField(label: '이름 입력', controller: _nameController),
+            SizedBox(height: 16),
+
+            // TextField: 연락처
+            Text(
+              '연락처',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            CustomTextField(
+              label: '연락처 입력',
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+            ),
+            SizedBox(height: 16),
+
+            // TextField: 생년월일
+            Text(
+              '생년월일',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            CustomTextField(
+              label: '생년월일 입력 (YYYY-MM-DD)',
+              controller: _birthDateController,
+              keyboardType: TextInputType.datetime,
+            ), // 날짜 입력 타입
+            SizedBox(height: 16),
+
+            // TextField: 성별
+            Text(
+              '성별',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            CustomTextField(
+              label: '성별 입력 (남/여)',
+              controller: _genderController,
+            ),
+            SizedBox(height: 16),
+
+            // 소속 대리점 선택 드롭다운 (필수)
+            Text(
+              '소속 대리점 선택',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            _isLoadingStores // 대리점 목록 로딩 중인 경우 로딩 인디케이터 표시
+                ? Center(child: CircularProgressIndicator())
+                : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 15,
+                    ),
+                  ),
+                  hint: Text(SELECT_STORE_HINT), // 힌트 텍스트
+                  value: _selectedStoreCode, // 현재 선택된 대리점 코드
+                  items:
+                      _stores.map((store) {
+                        // Map에서 storeCode와 storeName 가져오기 (키 이름 케이스 반영)
+                        final String storeCode =
+                            store['storeCode']?.toString() ?? '';
+                        final String storeName =
+                            store['storeName']?.toString() ?? '';
+                        return DropdownMenuItem<String>(
+                          value: storeCode, // 값은 storeCode 사용
+                          child: Text(storeName), // 표시되는 텍스트는 storeName
+                        );
+                      }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedStoreCode = newValue; // 선택된 대리점 코드 업데이트
+                      });
+                      print('>>> 선택된 대리점 코드: $_selectedStoreCode'); // 로깅
+                    }
+                  },
+                  // 대리점 회원은 소속 대리점 선택이 필수이므로 유효성 검사 필요
+                  validator:
+                      (value) => value == null ? '소속 대리점을 선택해주세요.' : null,
+                ),
+            SizedBox(height: 24),
+            // 계정 생성 버튼
+            Center(
+              // 버튼을 중앙에 배치
               child: CustomButton(
-                text: 'ID 중복 확인', // 텍스트 명확히
-                onPressed: () {
-                  // 항상 널이 아닌 함수
-                  // 함수 내부에서 idCheck 상태를 확인하여 액션 수행
-                  if (!idCheck) {
-                    idDoubleCheck(idCon.text);
-                  } else {
-                    // 이미 확인 완료된 상태일 때의 액션 (선택 사항)
-                    Get.snackbar(
-                      '확인 완료',
-                      '이미 중복 확인된 아이디입니다.',
-                      backgroundColor: Colors.orange,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-                // CustomButton 위젯 자체에 활성화/비활성화를 제어하는 로직이 없다면
-                // 버튼을 비활성화 상태처럼 보이게 하려면 CustomButton 위젯을 수정하거나
-                // 여기에 조건부 스타일링을 추가해야 합니다.
+                // CustomButton 사용
+                text: '계정 생성', // 버튼 텍스트
+                onPressed: _createAccount, // 널이 아닌 함수 전달
+                // CustomButton 스타일 조정은 위젯 내부에서 처리
               ),
-            ),
-            SizedBox(height: 16), // 간격 추가
-            // textField : PW
-            CustomTextField(label: '비밀번호를 입력 하세요', controller: pwCon),
-            SizedBox(height: 16), // 간격 추가
-            // textField : Name
-            CustomTextField(label: '이름를 입력 하세요', controller: nameCon),
-            SizedBox(height: 16), // 간격 추가
-            // button : 생년월일 선택
-            // CustomButtonCalender 사용 시 선택된 날짜 표시 및 초기화 로직 필요
-            CustomButtonCalender(
-              label:
-                  birthDate.isEmpty
-                      ? '생년월일 선택'
-                      : '생년월일: $birthDate', // 선택된 날짜 표시
-              onDateSelected: (DateTime date) {
-                // p0 대신 DateTime date 사용 (가독성)
-                setState(() {
-                  birthDate = date.toString().substring(
-                    0,
-                    10,
-                  ); // 'YYYY-MM-DD' 형식
-                });
-              },
-            ),
-            SizedBox(height: 16), // 간격 추가
-            // textField : Gender
-            CustomTextField(label: '성별를 입력 하세요', controller: genderCon),
-            SizedBox(height: 16), // 간격 추가
-            // textField : Phone
-            CustomTextField(label: '전화번호를 입력 하세요', controller: phoneCon),
-            SizedBox(height: 24), // 간격 추가
-            // button : 사용자 계정 + 대리점 소속 등록
-            CustomButton(
-              text: '사용자 계정 및 대리점 소속 등록', // 버튼 텍스트 변경
-              onPressed: _createUserAndAffiliate, // 널이 아닌 함수 전달
             ),
             SizedBox(height: 16), // 하단 간격
-
-            // TODO: CustomButtonCalender 선택 해제/초기화 기능 추가 필요
-            // 현재는 birthDate 상태만 초기화되고 버튼 텍스트는 업데이트되지만,
-            // 커스텀 위젯 내부 초기화 로직은 별도 구현 필요할 수 있습니다.
           ],
         ),
       ),
     );
-  } // build
+  }
 }

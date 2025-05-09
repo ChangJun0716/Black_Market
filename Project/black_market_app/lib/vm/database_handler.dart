@@ -873,6 +873,8 @@ class DatabaseHandler {
   // Store Manager : Get Scheduled Products by Date and Store (Using Map result)
   // Query adjusted for 'pUserId', 'oproductCode' case. purchaseId is int.
   // getScheduledProductsByDateAndStore 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인)
+  // getScheduledProductsByDateAndStore 메서드 (oproductCode integer 타입 반영, WHERE 절 수정)
+  // getScheduledProductsByDateAndStore 메서드 (Products 대문자, pUserId 포함, oproductCode integer 반영)
   Future<List<Map<String, dynamic>>> getScheduledProductsByDateAndStore(
     DateTime date,
     String storeCode,
@@ -881,22 +883,22 @@ class DatabaseHandler {
     final List<Map<String, dynamic>> queryResult = await db.rawQuery(
       '''
       SELECT
-        p.purchaseId, -- TEXT PRIMARY KEY
+        p.purchaseId, -- integer PRIMARY KEY autoincrement
         p.purchaseDate,
         p.purchaseQuanity,
         p.purchaseCardId, -- nullable int
         p.pStoreCode,
         p.purchaseDeliveryStatus,
-        p.oproductCode, -- case sensitive
+        p.oproductCode, -- integer
         p.purchasePrice,
-        p.puserid AS pUserId, -- puserid 컬럼을 pUserId 별칭으로 선택
+        p.puserid AS pUserId, -- puserid 컬럼을 pUserId 별칭으로 선택 (SQLite 실제 컬 컬럼명 가정)
         pr.productsColor,
         pr.productsSize,
         u.name AS customerName, -- users 테이블 조인하여 고객 이름 선택
         s.storeName AS storeName
       FROM purchase p
-      JOIN products pr ON p.oproductCode = pr.productsCode
-      JOIN users u ON p.puserid = u.userid -- puserid 컬럼으로 users 테이블 조인
+      JOIN Products pr ON p.oproductCode = pr.productsCode -- Products 테이블 조인 (대문자 P)
+      JOIN users u ON p.puserid = u.userid -- puserid 컬럼으로 users 테이블 조인 (SQLite 실제 컬럼명 가정)
       JOIN store s ON p.pStoreCode = s.storeCode
       WHERE p.purchaseDate = ? AND p.pStoreCode = ?
     ''',
@@ -907,22 +909,20 @@ class DatabaseHandler {
 
   // Store Manager : Get Received Inventory by Date Range and User (Using Map result)
   // Query adjusted for 'sproductCode' case.
+  // getReceivedInventoryByDateRangeAndUser 메서드 (Products 대문자 반영)
   Future<List<Map<String, dynamic>>> getReceivedInventoryByDateRangeAndUser(
     DateTime startDate,
     DateTime endDate,
     String userId,
   ) async {
-    final Database db = await initializeDB(); // initializeDB 호출
+    final Database db = await initializeDB();
     final List<Map<String, dynamic>> queryResult = await db.rawQuery(
       '''
       SELECT
-        sr.sproductCode, -- case sensitive
-        pr.productsName,
-        pr.productsColor,
-        pr.productsSize,
+        sr.sproductCode, pr.productsName, pr.productsColor, pr.productsSize,
         SUM(sr.stockReceiptsQuantityReceived) AS receivedQuantity
       FROM stockReceipts sr
-      JOIN products pr ON sr.sproductCode = pr.productsCode -- join key adjusted for case
+      JOIN Products pr ON sr.sproductCode = pr.productsCode -- Products 테이블 조인 (대문자 P)
       WHERE sr.stockReceiptsReceipDate BETWEEN ? AND ?
       AND sr.saUserid = ?
       GROUP BY sr.sproductCode, pr.productsName, pr.productsColor, pr.productsSize
@@ -934,47 +934,50 @@ class DatabaseHandler {
         userId,
       ],
     );
-    // db.close();
-    return queryResult; // Map keys match select statement aliases/names
+    return queryResult;
   }
 
   // Store Manager : Get Returns by Date (Using Map result)
   // Query adjusted for 'rProductCode', 'processionStatus' case.
+  // getReturnsByDate 메서드 (Products 대문자 반영, rProductCode TEXT vs productsCode INTEGER 조인 유지)
   Future<List<Map<String, dynamic>>> getReturnsByDate(DateTime date) async {
-    final Database db = await initializeDB(); // initializeDB 호출
+    final Database db = await initializeDB();
     final List<Map<String, dynamic>> queryResult = await db.rawQuery(
       '''
       SELECT
-        r.returnCode, -- int
-        r.ruserId,
-        r.rProductCode, -- case sensitive
-        pr.productsColor,
-        pr.productsSize,
-        r.returnDate,
-        r.processionStatus -- adjusted column name case
+        r.returnCode, r.ruserId, r.rProductCode,
+        pr.productsColor, pr.productsSize, -- products 테이블 조인
+        pr.productsName, -- 제품 이름 추가 (필요하다면)
+        r.returnReason, -- 반품 사유 추가
+        r.returnDate, r.returnCategory, r.processionStatus
       FROM return r
-      JOIN products pr ON r.rProductCode = pr.productsCode -- join key adjusted for case
+      JOIN Products pr ON r.rProductCode = pr.productsCode -- Products 테이블 조인 (대문자 P), TEXT vs INTEGER 조인
+      -- purchase 테이블과의 직접적인 연결(purchaseId) 또는 pStoreCode가 없으므로 대리점 필터링 불가능
       WHERE r.returnDate = ?
       ORDER BY r.returnCode
     ''',
       [date.toIso8601String().split('T')[0]],
     );
-    // db.close();
-    return queryResult; // Map keys match select statement aliases/names
+
+    // Note: 이 쿼리는 날짜로만 필터링하며 대리점별 필터링은 현재 스키마로는 불가능합니다.
+    // 만약 대리점별 반품 목록이 필요하다면, return 테이블에 pStoreCode 또는 purchaseId 컬럼 추가가 필요합니다.
+
+    return queryResult;
   }
 
   // Store Return Application: Get Purchase details by purchaseId
   // Used to get pUserId and oproductCode for return. purchaseId is int.
-  // getPurchaseDetailsByPurchaseId 메서드 (pUserId 다시 포함)
+  // getPurchaseDetailsByPurchaseId 메서드 (pUserId 다시 포함, purchaseId integer 처리)
+  // getPurchaseDetailsByPurchaseId 메서드 (pUserId 다시 포함, purchaseId integer 처리, oproductCode integer 타입 반영)
   Future<Map<String, dynamic>?> getPurchaseDetailsByPurchaseId(
     int purchaseId,
   ) async {
-    // purchaseId가 TEXT이지만, ?로 처리
+    // purchaseId는 int로 받음
     final Database db = await initializeDB();
     final List<Map<String, dynamic>> queryResult = await db.rawQuery(
-      // pUserId 컬럼 다시 선택 (puserid -> pUserId 별칭)
-      "SELECT puserid AS pUserId, oproductCode FROM purchase WHERE purchaseId = ?",
-      [purchaseId.toString()], // purchaseId가 TEXT이므로 String으로 전달
+      // pUserId 컬럼 다시 선택 (스키마 대소문자 사용), oproductCode는 integer
+      "SELECT pUserId, oproductCode FROM purchase WHERE purchaseId = ?", // pUserId 선택
+      [purchaseId], // purchaseId는 int로 전달
     );
     if (queryResult.isNotEmpty) {
       // pUserId와 oproductCode 모두 포함하여 반환
@@ -1010,7 +1013,9 @@ class DatabaseHandler {
   }
 
   // getPickupReadyOrdersByStore 쿼리에서 JOIN 절의 pUserId 컬럼 대소문자 수정
-  // getPickupReadyOrdersByStore 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인)
+  // getPickupReadyOrdersByStore 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인, purchaseId integer 검색 처리)
+  // getPickupReadyOrdersByStore 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인, purchaseId integer 검색 처리, oproductCode integer 타입 반영)
+  // getPickupReadyOrdersByStore 메서드 (Products 대문자, pUserId 포함 및 users 테이블 조인, purchaseId integer 검색 처리, oproductCode integer 타입 반영)
   Future<List<Map<String, dynamic>>> getPickupReadyOrdersByStore(
     String storeCode, {
     String? searchQuery,
@@ -1021,18 +1026,18 @@ class DatabaseHandler {
 
     String sql = '''
       SELECT
-        p.purchaseId, -- TEXT PRIMARY KEY
+        p.purchaseId, -- integer PRIMARY KEY autoincrement
         p.purchaseDate,
-        p.purchaseQuanity, -- case sensitive
-        p.oproductCode, -- case sensitive
+        p.purchaseQuanity,
+        p.oproductCode, -- integer
         pr.productsColor,
         pr.productsSize,
         u.name AS customerName, -- users 테이블 조인하여 고객 이름 선택
         p.purchaseDeliveryStatus, -- 현재 상태
-        p.puserid AS pUserId -- puserid 컬럼을 pUserId 별칭으로 선택
+        p.pUserId -- pUserId 컬럼 선택 (스키마 대소문자 사용)
       FROM purchase p
-      JOIN products pr ON p.oproductCode = pr.productsCode
-      JOIN users u ON p.puserid = u.userid -- puserid 컬럼으로 users 테이블 조인
+      JOIN Products pr ON p.oproductCode = pr.productsCode -- Products 테이블 조인 (대문자 P)
+      JOIN users u ON p.pUserId = u.userid -- users 테이블 조인 (pUserId 스키마 대소문자 사용)
       -- JOIN store s ON p.pStoreCode = s.storeCode 필요하다면 추가
       WHERE p.pStoreCode = ? AND p.purchaseDeliveryStatus = ?
     ''';
@@ -1040,9 +1045,17 @@ class DatabaseHandler {
     List<dynamic> args = [storeCode, pickupStatus];
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      // purchaseId가 TEXT이므로 TEXT 검색
-      sql += ' AND p.purchaseId = ?';
-      args.add(searchQuery);
+      // purchaseId가 이제 integer이므로 int.tryParse로 변환하여 검색
+      int? searchId = int.tryParse(searchQuery);
+      if (searchId != null) {
+        sql += ' AND p.purchaseId = ?';
+        args.add(searchId); // int로 전달
+      } else {
+        print(
+          'Warning: search query "$searchQuery" is not a valid purchaseId (integer)',
+        );
+        return []; // 유효하지 않은 검색어면 빈 목록 반환
+      }
     }
 
     sql += ' ORDER BY p.purchaseDate DESC';
@@ -1053,19 +1066,21 @@ class DatabaseHandler {
 
   // Store Product Condition: Update purchaseDeliveryStatus for a purchaseId
   // purchaseId type is int
+  // updatePurchaseDeliveryStatus 메서드 (purchaseId integer 처리)
+  // updatePurchaseDeliveryStatus 메서드 (purchaseId integer 처리)
+  // updatePurchaseDeliveryStatus 메서드 (purchaseId integer 처리)
   Future<int> updatePurchaseDeliveryStatus1(
     int purchaseId,
     String newStatus,
   ) async {
-    // purchaseId type is int
-    final Database db = await initializeDB(); // initializeDB 호출
+    // purchaseId는 int로 받음
+    final Database db = await initializeDB();
     int result = await db.update(
-      'purchase', // 업데이트할 테이블
-      {'purchaseDeliveryStatus': newStatus}, // 업데이트할 컬럼과 값
-      where: 'purchaseId = ?', // 업데이트 조건
-      whereArgs: [purchaseId], // 조건에 사용될 인자 (int)
+      'purchase',
+      {'purchaseDeliveryStatus': newStatus},
+      where: 'purchaseId = ?', // purchaseId는 integer
+      whereArgs: [purchaseId], // purchaseId를 int로 전달
     );
-    // db.close();
     return result;
   }
 
@@ -1181,6 +1196,8 @@ class DatabaseHandler {
   // Company Purchase List: Get purchase list details for a date range and optional store
   // Fetches purchase records with joined user and product info
   // getPurchaseList 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인)
+  // getPurchaseList 메서드 (pUserId 컬럼 다시 포함 및 users 테이블 조인, oproductCode integer 타입 반영)
+  // getPurchaseList 메서드 (Products 대문자, pUserId 포함, oproductCode integer 반영)
   Future<List<Map<String, dynamic>>> getPurchaseList({
     required DateTime startDate,
     required DateTime endDate,
@@ -1199,7 +1216,7 @@ class DatabaseHandler {
 
     String sql = '''
       SELECT
-        p.purchaseId, -- TEXT PRIMARY KEY
+        p.purchaseId, -- integer PRIMARY KEY autoincrement
         p.purchaseDate,
         p.purchaseQuanity,
         p.purchasePrice,
@@ -1209,11 +1226,12 @@ class DatabaseHandler {
         pr.productsName, -- 제품 이름 조인
         pr.productsColor,
         pr.productsSize,
-        p.puserid AS pUserId -- puserid 컬럼을 pUserId 별칭으로 선택
+        p.oproductCode, -- integer
+        p.pUserId -- pUserId 컬럼 선택 (스키마 대소문자 사용)
       FROM purchase p
       JOIN store s ON p.pStoreCode = s.storeCode
-      JOIN users u ON p.puserid = u.userid -- puserid 컬럼으로 users 테이블 조인
-      JOIN products pr ON p.oproductCode = pr.productsCode
+      JOIN users u ON p.pUserId = u.userid -- users 테이블 조인 (pUserId 스키마 대소문자 사용)
+      JOIN Products pr ON p.oproductCode = pr.productsCode -- Products 테이블 조인 (대문자 P)
       WHERE p.purchaseDate BETWEEN ? AND ?
     ''';
 
@@ -1274,17 +1292,20 @@ class DatabaseHandler {
     return queryResult; // 대리점별 총액 목록 (Map 리스트) 반환
   }
 
-  // Get storeCode from daffiliation table by userId
+  // Get storeCode from daffiliation table by userId (duserId 컬럼 이름 소문자 가정)
+  // Get storeCode from daffiliation table by userId (duserId 컬럼 이름 소문자 가정)
+  // Get storeCode from daffiliation table by userId (스키마 대소문자 duserId, dstoreCode 사용)
   Future<String?> getStoreCodeByUserId(String userId) async {
     final Database db = await initializeDB();
     final List<Map<String, Object?>> queryResult = await db.rawQuery(
-      // 쿼리의 컬럼 이름을 모두 소문자로 수정
-      "SELECT dstoreCode FROM daffiliation WHERE duserId = ?", // <-- 이 줄을 수정
+      // daffiliation 테이블의 컬럼 이름을 스키마 정의(duserId, dstoreCode)와 동일하게 사용
+      "SELECT dstoreCode FROM daffiliation WHERE duserId = ?", // <-- 이 줄 수정
       [userId],
     );
     if (queryResult.isNotEmpty) {
+      // SELECT 절에서 dstoreCode를 사용했으므로 키 이름도 dstoreCode
       return queryResult.first['dstoreCode']
-          ?.toString(); // <-- 여기서도 소문자로 가져오도록 수정
+          ?.toString(); // <--- 이 줄 유지 또는 수정 필요시 수정
     }
     return null; // User not found in daffiliation
   }
@@ -1392,5 +1413,6 @@ class DatabaseHandler {
       whereArgs: [purchaseId],
     );
   }
+
   // ------------------------------ //
 } // class
