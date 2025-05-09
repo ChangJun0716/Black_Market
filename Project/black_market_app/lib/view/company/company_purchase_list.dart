@@ -1,6 +1,7 @@
 // company_purchase_list.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // GetX 임포트 (firstWhereOrNull, Snackbar 등 사용)
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart'; // 날짜 포맷을 위해 intl 패키지 사용
 import 'package:black_market_app/vm/database_handler.dart'; // DatabaseHandler 임포트
 // 커스텀 위젯 임포트 (실제 프로젝트 경로에 맞게 수정 필요)
@@ -16,7 +17,9 @@ class CompanyPurchaseList extends StatefulWidget {
 
 class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
   late DatabaseHandler handler;
-
+  late bool _showTotalBox;
+  late String userId;
+  String userGrade = '';
   // 날짜 범위 상태
   DateTime? _startDate;
   DateTime? _endDate;
@@ -47,7 +50,9 @@ class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
   void initState() {
     super.initState();
     handler = DatabaseHandler(); // 핸들러 인스턴스 생성
-
+     final box = GetStorage();
+    userId = box.read('uid') ?? '';
+    _showTotalBox = false;
     // 초기 로딩: 현재 날짜 기준 기본 범위 설정 및 사용자 정보 가져오기
     DateTime now = DateTime.now();
     _startDate = DateTime(now.year, now.month, 1); // 이번 달 1일
@@ -56,7 +61,20 @@ class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
 
     // 사용자 정보 가져오기, 대리점 목록 가져오기, 초기 데이터 로딩 시작
     _loadInitialData();
+    loadUserGrade();
   }
+  Future<void> loadUserGrade() async {
+  try {
+    final result = await handler.getJobGradeByUserId(userId);
+    final parsedGrade = int.tryParse(result) ?? 0;
+    setState(() {
+      userGrade = result;
+      _showTotalBox = parsedGrade >= 3; // ✅ 안전하게 한 번에 갱신
+    });
+  } catch (e) {
+    debugPrint('직급 로딩 실패: $e');
+  }
+}
 
   @override
   void dispose() {
@@ -84,7 +102,7 @@ class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
       );
     }
   }
-
+  
   // 로그인 사용자 정보 가져오기
   // 반환 타입을 Future<void>로 명시
   Future<void> _fetchUserInfo() async {
@@ -351,33 +369,40 @@ class _CompanyPurchaseListState extends State<CompanyPurchaseList> {
             SizedBox(height: 24),
 
             // 총 판매 금액 표시 영역
-            Text(
-              '총 판매 금액',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Container(
-              padding: EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.blueGrey.withOpacity(0.1), // 배경색 추가
-              ),
-              child: Text(
-                // 권한 및 선택 조건에 따라 라벨 변경
-                // 권한 있고 특정 대리점 선택 시 -> [대리점 이름] 총액: [총액] 원
-                // 권한 없거나 전체 대리점 선택 시 -> 전체 총액: [총액] 원
-                (_selectedStoreCode != ALL_STORES_CODE &&
-                        _canViewSpecificStoreTotal)
-                    ? '${_getStoreNameByCodeS(_selectedStoreCode)} 총액: ${NumberFormat('#,###').format(_overallTotal)} 원' // <-- 변경된 이름 사용
-                    : '전체 총액: ${NumberFormat('#,###').format(_overallTotal)} 원',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueGrey[700],
-                ),
-              ),
-            ),
+            Visibility(
+  visible: _showTotalBox,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        '총 판매 금액',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      SizedBox(height: 8),
+      Container(
+        padding: EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.blueGrey.withOpacity(0.1),
+        ),
+        child: Text(
+          (_selectedStoreCode != ALL_STORES_CODE &&
+                  _canViewSpecificStoreTotal)
+              ? '${_getStoreNameByCodeS(_selectedStoreCode)} 총액: ${NumberFormat('#,###').format(_overallTotal)} 원'
+              : '전체 총액: ${NumberFormat('#,###').format(_overallTotal)} 원',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueGrey[700],
+          ),
+        ),
+      ),
+    ],
+  ),
+), 
+
+
             SizedBox(height: 24),
 
             // 구매 목록 상세 표시 영역
