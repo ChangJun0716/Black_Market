@@ -54,11 +54,9 @@ INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender)
 INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storenw01', 'nwpw368', '노원점지점장', '010-3333-0010', 12, '1989-10-10', '여'); -- memberType 12
 
 
--- ========================================
 -- 4. 샘플 본사 직원 직급 연결 (affiliation 테이블) 삽입
 --    (aJobGradeCode, aUserid, joinDate 컬럼 사용)
 --    (aUserid는 users 테이블 아이디와 일치시켜야 함)
--- ========================================
 INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('1', 'office001', '2020-01-01'); -- 사원
 INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('2', 'office002', '2018-03-15'); -- 대리
 INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('3', 'office003', '2015-07-01'); -- 부장
@@ -240,7 +238,7 @@ INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice
 --    (oproductCode는 Products 테이블의 productsCode 사용 (1부터 110까지 자동 할당 가정))
 --    (purchasePrice는 해당 oproductCode의 Products 테이블 가격 사용)
 -- ========================================
--- 강남점 (ST_GN, memberType 3 사용자 store_gn_test 소유) 관련 구매 데이터
+-- 강남점 (ST_GN, memberType 3 사용자 storegn01 소유) 관련 구매 데이터
 -- 제품 코드 1(줌 업턴 SC, 하얀색, 240), 7(줌 업턴 SC, 검은색, 250), 11(저니 런, 하얀색, 240), 37(서브존, 검은색, 250), 42(MW1880L1, 하얀색/검은색, 250), 52(URC42PMA, 하얀색/검은색, 250), 102(소프트라이드 올라, 검은색, 250) 사용
 INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-01', 2, 101, 'ST_GN', 'Shipped', 1, 119000*2, 'cust001'); -- purchaseId 1 (자동), 제품1 총액 238000
 INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-05', 1, 102, 'ST_GN', 'Ready for Pickup', 7, 119000*1, 'cust002'); -- purchaseId 2 (자동), 제품7 총액 119000 (픽업 대기 확인용)
@@ -250,6 +248,7 @@ INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode,
 INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 1, 106, 'ST_GN', 'Ready for Pickup', 52, 139000*1, 'cust002'); -- purchaseId 6 (자동), 제품52 총액 139000 (오늘 날짜, 픽업 대기 추가)
 INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 2, 107, 'ST_GN', 'Shipped', 102, 63000*2, 'cust001'); -- purchaseId 7 (자동), 제품102 총액 126000 (오늘 날짜)
 
+
 -- 다른 대리점 (종로점 ST_JN) 관련 구매 데이터 (필요시 추가)
 -- 제품 코드 21(울트라런 5, 하얀색, 240) 사용
 -- INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-07', 1, 201, 'ST_JN', 'Shipped', 21, 79000*1, 'cust001');
@@ -257,7 +256,7 @@ INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode,
 
 -- ========================================
 -- 8. 샘플 입고 기록 (stockReceipts 테이블) 삽입
---    (saUserid는 대리점 관리자 ID ('store_gn_test') 사용)
+--    (saUserid는 대리점 관리자 ID ('storegn01') 사용)
 --    (sproductCode는 Products 테이블의 productsCode 사용 (1, 6, 11, 41, 51, 61, 101))
 --    (saJobGradeCode 컬럼 없음 반영)
 -- ========================================
@@ -293,42 +292,41 @@ INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCateg
 -- checkGradeCode는 승인할 직급 코드 (2: 대리, 3: 부장, 4: 이사 등)
 -- corderID는 임의의 주문 ID (purchaseId 등 참조 가능, 여기서는 임의 값 사용)
 -- ========================================
-INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office001', '1', '2', '본사일사원', '재고 추가 요청', '창고 재고가 부족합니다. 제품 A 100개 추가 요청합니다.', '2025-05-07', 'Pending', 0, 1); -- 사원 -> 대리에게 요청
-INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office002', '2', '3', '본사이대리', '광고 집행 요청', '새 신발 제품 출시 기념 온라인 광고 집행 요청합니다.', '2025-05-08', 'Pending', 500000, 0); -- 대리 -> 부장에게 요청
+-- 임시로 approvalId INTEGER PRIMARY KEY AUTOINCREMENT 컬럼이 createApprovalDocument 테이블에 추가되었다고 가정하고, 해당 ID를 참조하여 approvalstep 데이터 삽입
+-- createApprovalDocument 테이블에 approvalId 컬럼이 실제 없다면, approvalstep 데이터 삽입 쿼리의 documentId를 createApprovalDocument의 PK 역할을 하는 다른 컬럼 (예: corderID 또는 임의의 고유 값)으로 수정해야 합니다.
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office001', '1', '2', '본사일사원', '재고 추가 요청', '창고 재고가 부족합니다. 제품 A 100개 추가 요청합니다.', '2025-05-07', 'Pending', 0, 1); -- approvalId 1 (자동), 사원 -> 대리에게 요청
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office002', '2', '3', '본사이대리', '광고 집행 요청', '새 신발 제품 출시 기념 온라인 광고 집행 요청합니다.', '2025-05-08', 'Pending', 500000, 2); -- approvalId 2 (자동), 대리 -> 부장에게 요청
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office003', '3', '4', '본사삼부장', '시설 보수 요청', '강남점 매장 에어컨 수리가 필요합니다.', '2025-05-08', 'Approved', 1000000, 3); -- approvalId 3 (자동), 부장 -> 이사에게 요청, 승인 완료
 
 
 -- ========================================
 -- 11. 샘플 전자 결재 진행 상태 (approvalstep 테이블) 삽입
 -- (documentId, stepOrder, approverId, status, comment, actionDate 사용)
--- documentId는 createApprovalDocument의 corderID (사용자 지정 값 또는 자동 생성 ID) 참조 필요
--- 여기서는 createApprovalDocument의 corderID (1, 0)를 사용 (실제 DB 설계에 맞게 수정 필요)
--- 실제로는 createApprovalDocument의 고유한 ID를 documentId로 사용해야 함
--- createApprovalDocument 테이블에 고유 ID 컬럼 추가 필요
--- 일단은 createApprovalDocument의 corderID를 documentId로 사용하여 샘플 데이터 구성
--- 실제로는 createApprovalDocument에 PK를 추가하고, 그 PK를 documentId로 사용하세요.
--- createApprovalDocument 테이블에 approvalId INTEGER PRIMARY KEY AUTOINCREMENT 컬럼을 추가했다고 가정하고, 해당 ID를 참조하여 데이터 삽입
--- 임시 방편으로 createApprovalDocument 테이블의 corderID를 documentId로 사용합니다.
--- 실제 DB 사용 시 createApprovalDocument의 실제 PK 값을 확인하여 사용하세요.
--- createApprovalDocument 테이블에 임시 PK 컬럼 approvalId를 추가했다고 가정
--- CREATE TABLE createApprovalDocument(approvalId INTEGER PRIMARY KEY AUTOINCREMENT, cuserid TEXT, ...)
+-- documentId는 createApprovalDocument 테이블의 PK (위에서 가정된 approvalId) 참조
+-- approverId는 승인자 ID (users 테이블의 userid)
+-- ========================================
+-- 문서 1 (createApprovalDocument approvalId 1)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (1, 1, 'office002', 'Pending', NULL, NULL); -- 1단계 승인자: 대리 (office002), 대기중
 
--- 임시로 documentId에 1, 2를 사용 (createApprovalDocument의 첫 두 행을 가정)
-INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (1, 1, 'office002', 'Pending', NULL, NULL); -- 문서 1 (재고 요청), 1단계 승인자: 대리
-INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (1, 2, 'office003', 'Pending', NULL, NULL); -- 문서 1, 2단계 승인자: 부장
-INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 1, 'office003', 'Pending', NULL, NULL); -- 문서 2 (광고 요청), 1단계 승인자: 부장
-INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 2, 'office004', 'Pending', NULL, NULL); -- 문서 2, 2단계 승인자: 이사
+-- 문서 2 (createApprovalDocument approvalId 2)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 1, 'office003', 'Pending', NULL, NULL); -- 1단계 승인자: 부장 (office003), 대기중
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 2, 'office004', 'Pending', NULL, NULL); -- 2단계 승인자: 이사 (office004), 대기중
+
+-- 문서 3 (createApprovalDocument approvalId 3)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (3, 1, 'office004', 'Approved', '시설 보수 승인합니다.', '2025-05-08'); -- 1단계 승인자: 이사 (office004), 승인 완료
 
 
 -- ========================================
 -- 12. 샘플 발주/출고 기록 (dispatch 테이블) 삽입
 -- (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId 사용)
--- dUserid: 본사 직원 또는 대리점 관리자 ID (임의 사용)
+-- dUserid: 발주/출고를 등록한 사용자 ID (본사 직원 또는 대리점 관리자)
 -- dProductCode: Products 테이블의 productsCode (integer)
 -- dstoreCode: 발주/출고되는 대리점 코드
 -- dipurchaseId: 관련된 구매 기록의 purchaseId (integer)
 -- ========================================
-INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 1, '2025-05-02', 5, 'ST_GN', 1); -- 본사 직원이 강남점으로 제품1 5개 출고 (구매1 관련)
-INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 7, '2025-05-06', 3, 'ST_GN', 2); -- 본사 직원이 강남점으로 제품7 3개 출고 (구매2 관련)
+-- 본사 직원 ('office001')이 강남점 ('ST_GN')으로 제품 출고 (구매1, 구매2 관련)
+INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 1, '2025-05-02', 5, 'ST_GN', 1); -- office001이 ST_GN으로 제품1 5개 출고 (구매1 관련)
+INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 7, '2025-05-06', 3, 'ST_GN', 2); -- office001이 ST_GN으로 제품7 3개 출고 (구매2 관련)
 
 
 -- ========================================
@@ -338,11 +336,12 @@ INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, d
 -- oproductCode: TEXT? 스키마에 TEXT로 되어있지만 Products.productsCode는 INTEGER이므로 스키마 재검토 필요
 -- 여기서는 oproductCode에 INTEGER 값을 삽입 (스키마와 일관성 부족 문제 발생 가능)
 -- oaUserid: 본사 직원 ID (office001 등)
+-- oajobGradCode: 해당 본사 직원의 직급 코드 (affiliation 테이블 등 참조)
 -- omamufacturer: 제조사 이름 (TEXT)
 -- ========================================
 -- orders 테이블의 oproductCode 컬럼이 TEXT가 아닌 INTEGER이라고 가정하고 삽입
-INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1001, '10', '2025-05-01', 'Completed', 80000*10, '1', 'office001', 1, '나이키'); -- 제품1 10개 발주 (사원이 나이키에)
-INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1002, '5', '2025-05-03', 'Pending', 65000*5, '2', 'office002', 37, '푸마'); -- 제품37 5개 발주 (대리가 푸마에)
+INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1001, '10', '2025-05-01', 'Completed', 80000*10, '1', 'office001', 1, '나이키'); -- orderID 1001, 제품1 10개 발주 (사원 office001이 나이키에)
+INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1002, '5', '2025-05-03', 'Pending', 65000*5, '2', 'office002', 37, '푸마'); -- orderID 1002, 제품37 5개 발주 (대리 office002가 푸마에)
 
 
 -- ========================================
@@ -370,5 +369,4 @@ INSERT INTO productRegistration (paUserid, pProductCode, introductionPhoto, ptit
 -- 관련된 반품 기록: returnCode 1, 2 (위에서 자동 할당된 값 가정)
 INSERT INTO returnInvestigation (raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, recordDate, resolutionDetails) VALUES ('office001', '1', 1, '나이키', '2025-05-07', '제품 불량 아님, 고객 변심으로 확인.'); -- 반품1 조사 기록
 INSERT INTO returnInvestigation (raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, recordDate, resolutionDetails) VALUES ('office001', '1', 2, '나이키', '2025-05-08', '제품 불량 확인됨. 교환 진행 예정.'); -- 반품2 조사 기록
-
 
