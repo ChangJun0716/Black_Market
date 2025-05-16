@@ -1331,7 +1331,7 @@ class DatabaseHandler {
       AND pStoreCode = ? 
       AND purchaseDeliveryStatus = '주문완료'
     ''',
-      [productCode.toString(), storeCode],
+      [productCode, storeCode],
     );
 
     return result
