@@ -1,0 +1,372 @@
+-- ========================================
+-- 모든 샘플 데이터 삽입 SQL 쿼리 (최신 스키마 반영)
+-- (실행 전 DB Browser for SQLite 등으로 기존 데이터를 모두 삭제하는 것을 권장합니다.)
+-- (UNIQUE constraint failed 오류 발생 시 해당 INSERT 문 건너뛰고 진행)
+-- ========================================
+
+-- 1. 샘플 대리점 정보 (store 테이블) 삽입
+-- (storeCode는 TEXT PRIMARY KEY)
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_GN', '강남점', '서울특별시 강남구 테헤란로 123', 127.0473, 37.5172);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_JN', '종로점', '서울특별시 종로구 세종대로 160', 126.9794, 37.5725);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_MP', '마포점', '서울특별시 마포구 양화로 161', 126.9268, 37.5594);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_SC', '서초점', '서울특별시 서초구 남부순환로 2406', 127.0215, 37.4959);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_SP', '송파점', '서울특별시 송파구 올림픽로 300', 127.1058, 37.5145);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_YD', '영등포점', '서울특별시 영등포구 의사당대로 1', 126.9268, 37.5206);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_JG', '중구점', '서울특별시 중구 명동길 1', 126.9809, 37.5635);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_DDM', '동대문점', '서울특별시 동대문구 천호대로 10', 127.0152, 37.5801);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_GR', '구로점', '서울특별시 구로구 디지털로 300', 126.8560, 37.4954);
+INSERT INTO store (storeCode, storeName, address, longitude, latitude) VALUES ('ST_NW', '노원점', '서울특별시 노원구 동일로 1342', 127.0636, 37.6538);
+
+
+-- 2. 샘플 직급 정보 (grade 테이블) 삽입
+-- (jobGradeCode는 TEXT PRIMARY KEY, joinDate 컬럼 없음)
+INSERT INTO grade (jobGradeCode, gradeName) VALUES ('1', '일반 사원');
+INSERT INTO grade (jobGradeCode, gradeName) VALUES ('2', '대리');
+INSERT INTO grade (jobGradeCode, gradeName) VALUES ('3', '부장');
+INSERT INTO grade (jobGradeCode, gradeName) VALUES ('4', '이사');
+
+
+-- ========================================
+-- 3. 샘플 회원 (users 테이블) 삽입
+--    (userid는 TEXT PRIMARY KEY, memberType INTEGER)
+--    (아이디와 비밀번호를 영어+숫자 조합으로 수정)
+-- ========================================
+-- 일반 회원 (memberType=1)
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('cust001', 'pw123a', '김길동', '010-1111-0001', 1, '1990-01-15', '남');
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('cust002', 'pw456b', '박영희', '010-1111-0002', 1, '1992-03-22', '여');
+
+-- 본사 직원 (memberType=2)
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('office001', 'staff1pw', '본사일사원', '010-2222-0001', 2, '1988-04-10', '남');
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('office002', 'daeri2pw', '본사이대리', '010-2222-0002', 2, '1985-07-25', '여');
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('office003', 'bujang3pw', '본사삼부장', '010-2222-0003', 2, '1975-11-03', '남');
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('office004', 'isa4pw', '본사사이사', '010-2222-0004', 2, '1968-09-18', '여');
+
+-- 대리점 회원 (memberType >= 3, 순차적으로 3부터 부여)
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storegn01', 'gnpw123', '강남점지점장', '010-3333-0001', 3, '1980-01-01', '남'); -- memberType 3
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storejn01', 'jnpw456', '종로점지점장', '010-3333-0002', 4, '1981-02-02', '여'); -- memberType 4
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storemp01', 'mppw789', '마포점지점장', '010-3333-0003', 5, '1982-03-03', '남'); -- memberType 5
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storesc01', 'scpwabc', '서초점지점장', '010-3333-0004', 6, '1983-04-04', '여'); -- memberType 6
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storesp01', 'sppwdef', '송파점지점장', '010-3333-0005', 7, '1984-05-05', '남'); -- memberType 7
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storeyd01', 'ydpwghi', '영등포점지점장', '010-3333-0006', 8, '1985-06-06', '여'); -- memberType 8
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storejg01', 'jgpwjkl', '중구점지점장', '010-3333-0007', 9, '1986-07-07', '남'); -- memberType 9
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storeddm01', 'ddmpw14', '동대문지점장', '010-3333-0008', 10, '1987-08-08', '여'); -- memberType 10
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storegr01', 'grpw257', '구로점지점장', '010-3333-0009', 11, '1988-09-09', '남'); -- memberType 11
+INSERT INTO users (userid, password, name, phone, memberType, birthDate, gender) VALUES ('storenw01', 'nwpw368', '노원점지점장', '010-3333-0010', 12, '1989-10-10', '여'); -- memberType 12
+
+
+-- 4. 샘플 본사 직원 직급 연결 (affiliation 테이블) 삽입
+--    (aJobGradeCode, aUserid, joinDate 컬럼 사용)
+--    (aUserid는 users 테이블 아이디와 일치시켜야 함)
+INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('1', 'office001', '2020-01-01'); -- 사원
+INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('2', 'office002', '2018-03-15'); -- 대리
+INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('3', 'office003', '2015-07-01'); -- 부장
+INSERT INTO affiliation (aJobGradeCode, aUserid, joinDate) VALUES ('4', 'office004', '2010-05-20'); -- 이사
+
+
+-- 5. 샘플 대리점 회원 소속 연결 (daffiliation 테이블) 삽입
+-- (dstoreCode와 duserId 컬럼 사용)
+-- (duserId는 users 테이블 아이디와 일치시켜야 함)
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_GN', 'storegn01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_JN', 'storejn01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_MP', 'storemp01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_SC', 'storesc01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_SP', 'storesp01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_YD', 'storeyd01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_JG', 'storejg01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_DDM', 'storeddm01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_GR', 'storegr01');
+INSERT INTO daffiliation (dstoreCode, duserId) VALUES ('ST_NW', 'storenw01');
+
+
+-- ========================================
+-- 6. 샘플 제품 (Products 테이블) 삽입 - Excel 파일 기반, 필터링 및 단순화 적용
+--    (Products 테이블 이름 대문자 P, productsCode INTEGER PRIMARY KEY AUTOINCREMENT 자동 할당)
+--    (Color: '하얀색', '검은색', '하얀색/검은색' 단순화, Size: 240-280 범위 10단위)
+--    (productsOPrice 컬럼 포함, productsImage는 NULL)
+-- ========================================
+-- 제품 이름: 나이키 에어 줌 업턴 SC (가격: 119000, 원가: 80000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 에어 줌 업턴 SC', 119000, 80000, 240, NULL); -- productsCode 1 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 에어 줌 업턴 SC', 119000, 80000, 250, NULL); -- productsCode 2 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 에어 줌 업턴 SC', 119000, 80000, 260, NULL); -- productsCode 3 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 에어 줌 업턴 SC', 119000, 80000, 270, NULL); -- productsCode 4 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 에어 줌 업턴 SC', 119000, 80000, 280, NULL); -- productsCode 5 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 에어 줌 업턴 SC', 119000, 80000, 240, NULL); -- productsCode 6 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 에어 줌 업턴 SC', 119000, 80000, 250, NULL); -- productsCode 7 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 에어 줌 업턴 SC', 119000, 80000, 260, NULL); -- productsCode 8 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 에어 줌 업턴 SC', 119000, 80000, 270, NULL); -- productsCode 9 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 에어 줌 업턴 SC', 119000, 80000, 280, NULL); -- productsCode 10 (자동)
+
+-- 제품 이름: 나이키 저니 런 (가격: 119000, 원가: 80000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 저니 런', 119000, 80000, 240, NULL); -- productsCode 11 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 저니 런', 119000, 80000, 250, NULL); -- productsCode 12 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 저니 런', 119000, 80000, 260, NULL); -- productsCode 13 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 저니 런', 119000, 80000, 270, NULL); -- productsCode 14 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '나이키 저니 런', 119000, 80000, 280, NULL); -- productsCode 15 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 저니 런', 119000, 80000, 240, NULL); -- productsCode 16 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 저니 런', 119000, 80000, 250, NULL); -- productsCode 17 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 저니 런', 119000, 80000, 260, NULL); -- productsCode 18 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 저니 런', 119000, 80000, 270, NULL); -- productsCode 19 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '나이키 저니 런', 119000, 80000, 280, NULL); -- productsCode 20 (자동)
+
+-- 제품 이름: 울트라런 5 (가격: 79000, 원가: 50000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '울트라런 5', 79000, 50000, 240, NULL); -- productsCode 21 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '울트라런 5', 79000, 50000, 250, NULL); -- productsCode 22 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '울트라런 5', 79000, 50000, 260, NULL); -- productsCode 23 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '울트라런 5', 79000, 50000, 270, NULL); -- productsCode 24 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '울트라런 5', 79000, 50000, 280, NULL); -- productsCode 25 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '울트라런 5', 79000, 50000, 240, NULL); -- productsCode 26 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '울트라런 5', 79000, 50000, 250, NULL); -- productsCode 27 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '울트라런 5', 79000, 50000, 260, NULL); -- productsCode 28 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '울트라런 5', 79000, 50000, 270, NULL); -- productsCode 29 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '울트라런 5', 79000, 50000, 280, NULL); -- productsCode 30 (자동)
+
+-- 제품 이름: 서브존 (가격: 99000, 원가: 65000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '서브존', 99000, 65000, 240, NULL); -- productsCode 31 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '서브존', 99000, 65000, 250, NULL); -- productsCode 32 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '서브존', 99000, 65000, 260, NULL); -- productsCode 33 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '서브존', 99000, 65000, 270, NULL); -- productsCode 34 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '서브존', 99000, 65000, 280, NULL); -- productsCode 35 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '서브존', 99000, 65000, 240, NULL); -- productsCode 36 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '서브존', 99000, 65000, 250, NULL); -- productsCode 37 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '서브존', 99000, 65000, 260, NULL); -- productsCode 38 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '서브존', 99000, 65000, 270, NULL); -- productsCode 39 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '서브존', 99000, 65000, 280, NULL); -- productsCode 40 (자동)
+
+-- 제품 이름: MW1880L1 (가격: 149000, 원가: 100000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880L1', 149000, 100000, 240, NULL); -- productsCode 41 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880L1', 149000, 100000, 250, NULL); -- productsCode 42 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880L1', 149000, 100000, 260, NULL); -- productsCode 43 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880L1', 149000, 100000, 270, NULL); -- productsCode 44 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880L1', 149000, 100000, 280, NULL); -- productsCode 45 (자동)
+
+-- 제품 이름: MW1880C1 (가격: 149000, 원가: 100000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880C1', 149000, 100000, 240, NULL); -- productsCode 46 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880C1', 149000, 100000, 250, NULL); -- productsCode 47 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880C1', 149000, 100000, 260, NULL); -- productsCode 48 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880C1', 149000, 100000, 270, NULL); -- productsCode 49 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MW1880C1', 149000, 100000, 280, NULL); -- productsCode 50 (자동)
+
+-- 제품 이름: URRC42PMA (가격: 139000, 원가: 90000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'URC42PMA', 139000, 90000, 240, NULL); -- productsCode 51 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'URC42PMA', 139000, 90000, 250, NULL); -- productsCode 52 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'URC42PMA', 139000, 90000, 260, NULL); -- productsCode 53 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'URC42PMA', 139000, 90000, 270, NULL); -- productsCode 54 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'URC42PMA', 139000, 90000, 280, NULL); -- productsCode 55 (자동)
+
+-- 제품 이름: MR530EWB (가격: 129000, 원가: 85000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MR530EWB', 129000, 85000, 240, NULL); -- productsCode 56 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MR530EWB', 129000, 85000, 250, NULL); -- productsCode 57 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MR530EWB', 129000, 85000, 260, NULL); -- productsCode 58 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MR530EWB', 129000, 85000, 270, NULL); -- productsCode 59 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'MR530EWB', 129000, 85000, 280, NULL); -- productsCode 60 (자동)
+
+-- 제품 이름: U740GR2 (가격: 139000, 원가: 90000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'U740GR2', 139000, 90000, 240, NULL); -- productsCode 61 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'U740GR2', 139000, 90000, 250, NULL); -- productsCode 62 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'U740GR2', 139000, 90000, 260, NULL); -- productsCode 63 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'U740GR2', 139000, 90000, 270, NULL); -- productsCode 64 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', 'U740GR2', 139000, 90000, 280, NULL); -- productsCode 65 (자동)
+
+-- 제품 이름: 벨라 V 블러쉬 (가격: 79000, 원가: 50000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '벨라 V 블러쉬', 79000, 50000, 240, NULL); -- productsCode 66 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '벨라 V 블러쉬', 79000, 50000, 250, NULL); -- productsCode 67 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '벨라 V 블러쉬', 79000, 50000, 260, NULL); -- productsCode 68 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '벨라 V 블러쉬', 79000, 50000, 270, NULL); -- productsCode 69 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '벨라 V 블러쉬', 79000, 50000, 280, NULL); -- productsCode 70 (자동)
+
+-- 제품 이름: 푸마 클럽 II 에라 (가격: 79000, 원가: 50000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 클럽 II 에라', 79000, 50000, 240, NULL); -- productsCode 71 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 클럽 II 에라', 79000, 50000, 250, NULL); -- productsCode 72 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 클럽 II 에라', 79000, 50000, 260, NULL); -- productsCode 73 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 클럽 II 에라', 79000, 50000, 270, NULL); -- productsCode 74 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 클럽 II 에라', 79000, 50000, 280, NULL); -- productsCode 75 (자동)
+
+-- 제품 이름: 푸마 리키 클래식 (가격: 69000, 원가: 45000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 리키 클래식', 69000, 45000, 240, NULL); -- productsCode 76 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 리키 클래식', 69000, 45000, 250, NULL); -- productsCode 77 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 리키 클래식', 69000, 45000, 260, NULL); -- productsCode 78 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 리키 클래식', 69000, 45000, 270, NULL); -- productsCode 79 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '푸마 리키 클래식', 69000, 45000, 280, NULL); -- productsCode 80 (자동)
+
+-- 제품 이름: 코트 랠리 스카이 (가격: 69000, 원가: 45000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '코트 랠리 스카이', 69000, 45000, 240, NULL); -- productsCode 81 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '코트 랠리 스카이', 69000, 45000, 250, NULL); -- productsCode 82 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '코트 랠리 스카이', 69000, 45000, 260, NULL); -- productsCode 83 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '코트 랠리 스카이', 69000, 45000, 270, NULL); -- productsCode 84 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색', '코트 랠리 스카이', 69000, 45000, 280, NULL); -- productsCode 85 (자동)
+
+-- 제품 이름: 프라울 3 EASE IN WNS (가격: 71000, 원가: 48000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '프라울 3 EASE IN WNS', 71000, 48000, 240, NULL); -- productsCode 86 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '프라울 3 EASE IN WNS', 71000, 48000, 250, NULL); -- productsCode 87 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '프라울 3 EASE IN WNS', 71000, 48000, 260, NULL); -- productsCode 88 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '프라울 3 EASE IN WNS', 71000, 48000, 270, NULL); -- productsCode 89 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '프라울 3 EASE IN WNS', 71000, 48000, 280, NULL); -- productsCode 90 (자동)
+
+-- 제품 이름: 파운스 라이트 (가격: 63000, 원가: 40000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '파운스 라이트', 63000, 40000, 240, NULL); -- productsCode 91 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '파운스 라이트', 63000, 40000, 250, NULL); -- productsCode 92 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '파운스 라이트', 63000, 40000, 260, NULL); -- productsCode 93 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '파운스 라이트', 63000, 40000, 270, NULL); -- productsCode 94 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '파운스 라이트', 63000, 40000, 280, NULL); -- productsCode 95 (자동)
+
+-- 제품 이름: 플렉스포커스 라이트 모던 (가격: 69000, 원가: 45000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '플렉스포커스 라이트 모던', 69000, 45000, 240, NULL); -- productsCode 96 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '플렉스포커스 라이트 모던', 69000, 45000, 250, NULL); -- productsCode 97 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '플렉스포커스 라이트 모던', 69000, 45000, 260, NULL); -- productsCode 98 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '플렉스포커스 라이트 모던', 69000, 45000, 270, NULL); -- productsCode 99 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('하얀색/검은색', '플렉스포커스 라이트 모던', 69000, 45000, 280, NULL); -- productsCode 100 (자동)
+
+-- 제품 이름: 소프트라이드 올라 (가격: 63000, 원가: 40000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '소프트라이드 올라', 63000, 40000, 240, NULL); -- productsCode 101 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '소프트라이드 올라', 63000, 40000, 250, NULL); -- productsCode 102 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '소프트라이드 올라', 63000, 40000, 260, NULL); -- productsCode 103 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '소프트라이드 올라', 63000, 40000, 270, NULL); -- productsCode 104 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '소프트라이드 올라', 63000, 40000, 280, NULL); -- productsCode 105 (자동)
+
+-- 제품 이름: 파크 라이프스타일 오리지날 (가격: 89000, 원가: 60000)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '파크 라이프스타일 오리지날', 89000, 60000, 240, NULL); -- productsCode 106 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '파크 라이프스타일 오리지날', 89000, 60000, 250, NULL); -- productsCode 107 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '파크 라이프스타일 오리지날', 89000, 60000, 260, NULL); -- productsCode 108 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '파크 라이프스타일 오리지날', 89000, 60000, 270, NULL); -- productsCode 109 (자동)
+INSERT INTO Products (productsColor, productsName, productsPrice, productsOPrice, productsSize, productsImage) VALUES ('검은색', '파크 라이프스타일 오리지날', 89000, 60000, 280, NULL); -- productsCode 110 (자동)
+
+
+-- ========================================
+-- 7. 샘플 구매 기록 (purchase 테이블) 삽입
+--    (purchaseId integer PRIMARY KEY autoincrement 자동 할당)
+--    (pUserId, pStoreCode, oproductCode는 위 샘플 데이터 사용)
+--    (oproductCode는 Products 테이블의 productsCode 사용 (1부터 110까지 자동 할당 가정))
+--    (purchasePrice는 해당 oproductCode의 Products 테이블 가격 사용)
+-- ========================================
+-- 강남점 (ST_GN, memberType 3 사용자 storegn01 소유) 관련 구매 데이터
+-- 제품 코드 1(줌 업턴 SC, 하얀색, 240), 7(줌 업턴 SC, 검은색, 250), 11(저니 런, 하얀색, 240), 37(서브존, 검은색, 250), 42(MW1880L1, 하얀색/검은색, 250), 52(URC42PMA, 하얀색/검은색, 250), 102(소프트라이드 올라, 검은색, 250) 사용
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-01', 2, 101, 'ST_GN', 'Shipped', 1, 119000*2, 'cust001'); -- purchaseId 1 (자동), 제품1 총액 238000
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-05', 1, 102, 'ST_GN', 'Ready for Pickup', 7, 119000*1, 'cust002'); -- purchaseId 2 (자동), 제품7 총액 119000 (픽업 대기 확인용)
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-06', 3, 103, 'ST_GN', 'Picked Up', 1, 119000*3, 'cust001'); -- purchaseId 3 (자동), 제품1 총액 357000 (픽업 완료 확인용)
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 1, 104, 'ST_GN', 'Shipped', 37, 99000*1, 'cust002'); -- purchaseId 4 (자동), 제품37 총액 99000 (입고 예정 확인용 - 오늘 날짜)
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 1, 105, 'ST_GN', 'Shipped', 42, 149000*1, 'cust001'); -- purchaseId 5 (자동), 제품42 총액 149000 (입고 예정 확인용 - 오늘 날짜)
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 1, 106, 'ST_GN', 'Ready for Pickup', 52, 139000*1, 'cust002'); -- purchaseId 6 (자동), 제품52 총액 139000 (오늘 날짜, 픽업 대기 추가)
+INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-08', 2, 107, 'ST_GN', 'Shipped', 102, 63000*2, 'cust001'); -- purchaseId 7 (자동), 제품102 총액 126000 (오늘 날짜)
+
+
+-- 다른 대리점 (종로점 ST_JN) 관련 구매 데이터 (필요시 추가)
+-- 제품 코드 21(울트라런 5, 하얀색, 240) 사용
+-- INSERT INTO purchase (purchaseDate, purchaseQuanity, purchaseCardId, pStoreCode, purchaseDeliveryStatus, oproductCode, purchasePrice, pUserId) VALUES ('2025-05-07', 1, 201, 'ST_JN', 'Shipped', 21, 79000*1, 'cust001');
+
+
+-- ========================================
+-- 8. 샘플 입고 기록 (stockReceipts 테이블) 삽입
+--    (saUserid는 대리점 관리자 ID ('storegn01') 사용)
+--    (sproductCode는 Products 테이블의 productsCode 사용 (1, 6, 11, 41, 51, 61, 101))
+--    (saJobGradeCode 컬럼 없음 반영)
+-- ========================================
+-- 강남점 관리자 ('storegn01')의 입고 기록
+-- 제품 코드 1(하얀색, 240), 6(검은색, 240), 11(하얀색, 240), 41(MW1880L1, 하얀색/검은색, 240), 51(URC42PMA, 하얀색/검은색, 240), 61(U740GR2, 하얀색/검은색, 240), 101(소프트라이드 올라, 검은색, 240) 사용
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 10, '2025-05-07', 1, '나이키'); -- 제품1 입고
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 5, '2025-05-07', 6, '나이키'); -- 제품6 입고
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 8, '2025-05-08', 11, '나이키'); -- 제품11 입고 (오늘 날짜)
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 12, '2025-05-08', 41, '뉴발란스'); -- 제품41 입고 (오늘 날짜)
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 6, '2025-05-08', 51, '뉴발란스'); -- 제품51 입고 (오늘 날짜)
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 9, '2025-05-08', 61, '뉴발란스'); -- 제품61 입고 (오늘 날짜)
+INSERT INTO stockReceipts (saUserid, stockReceiptsQuantityReceived, stockReceiptsReceipDate, sproductCode, smanufacturerName) VALUES ('storegn01', 7, '2025-05-08', 101, '푸마'); -- 제품101 입고 (오늘 날짜)
+
+
+-- ========================================
+-- 9. 샘플 반품 기록 (return 테이블) 삽입
+--    (ruserId는 반품한 고객 ID 사용)
+--    (rProductCode는 Products 테이블의 productsCode 사용 (7, 1, 42, 52, 102))
+--    (returnCode INTEGER PRIMARY KEY 자동 할당)
+--    (주의: return 테이블에 pStoreCode 또는 purchaseId 컬럼이 없어 특정 대리점의 반품만 가져오는 쿼리가 현재 불완전합니다.)
+-- ========================================
+-- 제품 코드 7(검은색, 250), 1(하얀색, 240), 42(하얀색/검은색, 250), 52(하얀색/검은색, 250), 102(검은색, 250) 사용
+INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCategory, processionStatus) VALUES ('cust002', 7, '사이즈 불일치', '2025-05-07', '고객 변심', '접수 완료'); -- returnCode 1 (자동), 제품7 반품
+INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCategory, processionStatus) VALUES ('cust001', 1, '제품 불량', '2025-05-08', '제품 이상', '처리 중'); -- returnCode 2 (자동), 제품1 반품 (오늘 날짜)
+INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCategory, processionStatus) VALUES ('cust002', 42, '색상 불만', '2025-05-08', '고객 변심', '접수 대기'); -- returnCode 3 (자동), 제품42 반품 (오늘 날짜)
+INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCategory, processionStatus) VALUES ('cust001', 52, '제품 상태 불량', '2025-05-08', '제품 이상', '접수 대기'); -- returnCode 4 (자동), 제품52 반품 (오늘 날짜)
+INSERT INTO return (ruserId, rProductCode, returnReason, returnDate, returnCategory, processionStatus) VALUES ('cust002', 102, '단순 변심', '2025-05-08', '고객 변심', '접수 대기'); -- returnCode 5 (자동), 제품102 반품 (오늘 날짜)
+
+-- ========================================
+-- 10. 샘플 전자 결재 문서 (createApprovalDocument 테이블) 삽입
+-- (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID 사용)
+-- cuserid, name, cajobGradeCode는 본사 직원 사용 (office001, office002 등)
+-- checkGradeCode는 승인할 직급 코드 (2: 대리, 3: 부장, 4: 이사 등)
+-- corderID는 임의의 주문 ID (purchaseId 등 참조 가능, 여기서는 임의 값 사용)
+-- ========================================
+-- 임시로 approvalId INTEGER PRIMARY KEY AUTOINCREMENT 컬럼이 createApprovalDocument 테이블에 추가되었다고 가정하고, 해당 ID를 참조하여 approvalstep 데이터 삽입
+-- createApprovalDocument 테이블에 approvalId 컬럼이 실제 없다면, approvalstep 데이터 삽입 쿼리의 documentId를 createApprovalDocument의 PK 역할을 하는 다른 컬럼 (예: corderID 또는 임의의 고유 값)으로 수정해야 합니다.
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office001', '1', '2', '본사일사원', '재고 추가 요청', '창고 재고가 부족합니다. 제품 A 100개 추가 요청합니다.', '2025-05-07', 'Pending', 0, 1); -- approvalId 1 (자동), 사원 -> 대리에게 요청
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office002', '2', '3', '본사이대리', '광고 집행 요청', '새 신발 제품 출시 기념 온라인 광고 집행 요청합니다.', '2025-05-08', 'Pending', 500000, 2); -- approvalId 2 (자동), 대리 -> 부장에게 요청
+INSERT INTO createApprovalDocument (cuserid, cajobGradeCode, checkGradeCode, name, title, content, date, approvalStatus, approvalRequestExpense, corderID) VALUES ('office003', '3', '4', '본사삼부장', '시설 보수 요청', '강남점 매장 에어컨 수리가 필요합니다.', '2025-05-08', 'Approved', 1000000, 3); -- approvalId 3 (자동), 부장 -> 이사에게 요청, 승인 완료
+
+
+-- ========================================
+-- 11. 샘플 전자 결재 진행 상태 (approvalstep 테이블) 삽입
+-- (documentId, stepOrder, approverId, status, comment, actionDate 사용)
+-- documentId는 createApprovalDocument 테이블의 PK (위에서 가정된 approvalId) 참조
+-- approverId는 승인자 ID (users 테이블의 userid)
+-- ========================================
+-- 문서 1 (createApprovalDocument approvalId 1)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (1, 1, 'office002', 'Pending', NULL, NULL); -- 1단계 승인자: 대리 (office002), 대기중
+
+-- 문서 2 (createApprovalDocument approvalId 2)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 1, 'office003', 'Pending', NULL, NULL); -- 1단계 승인자: 부장 (office003), 대기중
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (2, 2, 'office004', 'Pending', NULL, NULL); -- 2단계 승인자: 이사 (office004), 대기중
+
+-- 문서 3 (createApprovalDocument approvalId 3)의 결재 단계
+INSERT INTO approvalstep (documentId, stepOrder, approverId, status, comment, actionDate) VALUES (3, 1, 'office004', 'Approved', '시설 보수 승인합니다.', '2025-05-08'); -- 1단계 승인자: 이사 (office004), 승인 완료
+
+
+-- ========================================
+-- 12. 샘플 발주/출고 기록 (dispatch 테이블) 삽입
+-- (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId 사용)
+-- dUserid: 발주/출고를 등록한 사용자 ID (본사 직원 또는 대리점 관리자)
+-- dProductCode: Products 테이블의 productsCode (integer)
+-- dstoreCode: 발주/출고되는 대리점 코드
+-- dipurchaseId: 관련된 구매 기록의 purchaseId (integer)
+-- ========================================
+-- 본사 직원 ('office001')이 강남점 ('ST_GN')으로 제품 출고 (구매1, 구매2 관련)
+INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 1, '2025-05-02', 5, 'ST_GN', 1); -- office001이 ST_GN으로 제품1 5개 출고 (구매1 관련)
+INSERT INTO dispatch (dUserid, dProductCode, dispatchDate, dispatchedQuantity, dstoreCode, dipurchaseId) VALUES ('office001', 7, '2025-05-06', 3, 'ST_GN', 2); -- office001이 ST_GN으로 제품7 3개 출고 (구매2 관련)
+
+
+-- ========================================
+-- 13. 샘플 주문 기록 (orders 테이블) 삽입
+-- (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer 사용)
+-- orderID: INTEGER (PRIMARY KEY는 아님)
+-- oproductCode: TEXT? 스키마에 TEXT로 되어있지만 Products.productsCode는 INTEGER이므로 스키마 재검토 필요
+-- 여기서는 oproductCode에 INTEGER 값을 삽입 (스키마와 일관성 부족 문제 발생 가능)
+-- oaUserid: 본사 직원 ID (office001 등)
+-- oajobGradCode: 해당 본사 직원의 직급 코드 (affiliation 테이블 등 참조)
+-- omamufacturer: 제조사 이름 (TEXT)
+-- ========================================
+-- orders 테이블의 oproductCode 컬럼이 TEXT가 아닌 INTEGER이라고 가정하고 삽입
+INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1001, '10', '2025-05-01', 'Completed', 80000*10, '1', 'office001', 1, '나이키'); -- orderID 1001, 제품1 10개 발주 (사원 office001이 나이키에)
+INSERT INTO orders (orderID, orderQuantity, orderDate, orderStatus, orderPrice, oajobGradCode, oaUserid, oproductCode, omamufacturer) VALUES (1002, '5', '2025-05-03', 'Pending', 65000*5, '2', 'office002', 37, '푸마'); -- orderID 1002, 제품37 5개 발주 (대리 office002가 푸마에)
+
+
+-- ========================================
+-- 14. 샘플 제품 등록 기록 (productRegistration 테이블) 삽입
+-- (paUserid, pProductCode, introductionPhoto, ptitle, contentJson 사용)
+-- paUserid: 제품을 등록한 사용자 ID (본사 직원)
+-- pProductCode: 등록된 제품의 productsCode (INTEGER? 스키마에 TEXT로 되어있지만 Products.productsCode는 INTEGER이므로 스키마 재검토 필요)
+-- 여기서는 pProductCode에 INTEGER 값을 삽입 (스키마와 일관성 부족 문제 발생 가능)
+-- introductionPhoto: BLOB (NULL)
+-- ptitle, contentJson: TEXT (임의 값)
+-- ========================================
+-- productRegistration 테이블의 pProductCode 컬럼이 TEXT가 아닌 INTEGER이라고 가정하고 삽입
+INSERT INTO productRegistration (paUserid, pProductCode, introductionPhoto, ptitle, contentJson) VALUES ('office001', 1, NULL, '신제품 등록: 나이키 에어 줌 업턴 SC', '{"description": "편안한 착화감의 런닝화입니다."}'); -- 사원이 제품1 등록
+INSERT INTO productRegistration (paUserid, pProductCode, introductionPhoto, ptitle, contentJson) VALUES ('office003', 41, NULL, '신제품 등록: MW1880L1', '{"description": "클래식한 디자인의 뉴발란스 신발입니다."}'); -- 부장이 제품41 등록
+
+
+-- ========================================
+-- 15. 샘플 반품 조사 기록 (returnInvestigation 테이블) 삽입
+-- (raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, recordDate, resolutionDetails 사용)
+-- raUserid, raJobGradeCode: 반품 조사를 수행한 본사 직원 ID 및 직급 코드
+-- rreturnCode: 관련된 반품 기록의 returnCode (INTEGER)
+-- rmanufacturerName: 제조사 이름 (TEXT)
+-- ========================================
+-- 반품 조사자: 본사 직원 (office001, 사원)
+-- 관련된 반품 기록: returnCode 1, 2 (위에서 자동 할당된 값 가정)
+INSERT INTO returnInvestigation (raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, recordDate, resolutionDetails) VALUES ('office001', '1', 1, '나이키', '2025-05-07', '제품 불량 아님, 고객 변심으로 확인.'); -- 반품1 조사 기록
+INSERT INTO returnInvestigation (raUserid, raJobGradeCode, rreturnCode, rmanufacturerName, recordDate, resolutionDetails) VALUES ('office001', '1', 2, '나이키', '2025-05-08', '제품 불량 확인됨. 교환 진행 예정.'); -- 반품2 조사 기록
+
