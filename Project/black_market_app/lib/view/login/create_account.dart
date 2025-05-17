@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+import '../../global.dart';
+
 class CreateAccount extends StatefulWidget {
   const CreateAccount({super.key});
 
@@ -172,7 +174,7 @@ class _CreateAccountState extends State<CreateAccount> {
 insertUserAccount()async{
   var request = http.MultipartRequest(
     'POST', 
-    Uri.parse("http://127.0.0.1:8000/changjun/insertUserAccount")
+    Uri.parse("http://${globalip}:8000/changjun/insertUserAccount")
   );
   request.fields['userid'] = idCon.text;
   request.fields['password'] = pwCon.text;

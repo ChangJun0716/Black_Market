@@ -1,0 +1,1 @@
+final String globalip = "127.0.0.1";
