@@ -1,13 +1,12 @@
 import 'package:black_market_app/message/custom_dialogue.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
-import 'package:black_market_app/model/users.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_button_calender.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
-import 'package:black_market_app/view/login/login.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class CreateAccount extends StatefulWidget {
   const CreateAccount({super.key});
@@ -165,35 +164,33 @@ class _CreateAccountState extends State<CreateAccount> {
         textColor: Colors.white,
       );
     } else {
-      var userInfoInsert = Users(
-        userid: idCon.text,
-        password: pwCon.text,
-        name: nameCon.text,
-        phone: phoneCon.text,
-        memberType: 1,
-        birthDate: birthDate,
-        gender: genderCon.text,
-      );
-      
-      try {
-        // 비동기적으로 회원가입 처리
-        await handler.insertUserInfo(userInfoInsert);
-        CustomSnackbar().showSnackbar(
-          title: '가입 성공',
-          message: '가입이 완료되었습니다.',
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-        );
-        // 회원가입 완료 후 홈 화면으로 이동
-        Get.offAll(Login()); 
-      } catch (e) {
-        CustomSnackbar().showSnackbar(
-          title: '오류',
-          message: '회원가입 중 오류가 발생했습니다.',
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      }
+      insertUserAccount();
     }
   }
+// --------------------------------------- //
+// 3. 사용자가 입력한 정보를 database 에 insert 하는 함수
+insertUserAccount()async{
+  var request = http.MultipartRequest(
+    'POST', 
+    Uri.parse("http://127.0.0.1:8000/changjun/insertUserAccount")
+  );
+  request.fields['userid'] = idCon.text;
+  request.fields['password'] = pwCon.text;
+  request.fields['name'] = nameCon.text;
+  request.fields['phone'] = phoneCon.text;
+  request.fields['birthDate'] = birthDate;
+  request.fields['gender'] = genderCon.text;
+  request.fields['memberType'] = 1.toString();
+  var res = await request.send();
+  if(res.statusCode == 200){
+    CustomDialogue().showDialogue(title: '회원 가입 성공', middleText: '회원가입에 성공 하셨습니다.',
+    confirmText: "확인",
+    onConfirm: () => Get.back(),
+    );
+  } else {
+    CustomSnackbar().showSnackbar(title: '오류', message: '회원 가입에 실패 하였습니다.', backgroundColor: Colors.red, textColor: Colors.white);
+  }
 }
+// --------------------------------------- //
+
+}// class

@@ -58,6 +58,8 @@ dependencies:
  # Localizations // pub.dev 에서 추가하는 것 아님!
   flutter_localizations:
     sdk: flutter
+  # http
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:
