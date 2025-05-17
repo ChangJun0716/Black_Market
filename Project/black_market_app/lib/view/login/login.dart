@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textbutton.dart';
@@ -129,7 +130,7 @@ class _LoginState extends State<Login> {
   // --------------------------------------- //
   // 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
   getJSONData(String id, String pw)async{
-    var response = await http.get(Uri.parse("http://127.0.0.1:8000/changjun/selectUser?userid=$id&password=$pw"));
+    var response = await http.get(Uri.parse("http://${globalip}:8000/changjun/selectUser?userid=$id&password=$pw"));
     data.clear();
     data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
     // print(data); --- 1

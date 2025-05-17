@@ -26,7 +26,7 @@ DROP TABLE IF EXISTS `affiliation`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `affiliation` (
   `joinDate` varchar(45) DEFAULT NULL,
-  `users_userid` int NOT NULL,
+  `users_userid` varchar(45) NOT NULL,
   `grade_jobGradeCode` int NOT NULL,
   PRIMARY KEY (`users_userid`,`grade_jobGradeCode`),
   KEY `fk_affiliation_grade1_idx` (`grade_jobGradeCode`),
@@ -467,7 +467,7 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
-  `userid` int NOT NULL,
+  `userid` varchar(45) NOT NULL,
   `password` varchar(45) DEFAULT NULL,
   `name` varchar(45) DEFAULT NULL,
   `phone` varchar(45) DEFAULT NULL,
