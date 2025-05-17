@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:black_market_app/message/custom_dialogue.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
@@ -26,6 +28,7 @@ class _CreateAccountState extends State<CreateAccount> {
   late TextEditingController phoneCon;
   late String birthDate;
   late bool idCheck;
+  List data = []; // id 중복 체크 함수의 결과를 담을 list
 
   @override
   void initState() {
@@ -67,7 +70,10 @@ class _CreateAccountState extends State<CreateAccount> {
               CustomButton(
                 text: '중복 확인',
                 onPressed: () {
-                  idDoubleCheck(idCon.text);
+                  if (idCon.text.trim().isEmpty){
+                  }else{
+                    idDoubleCheck(idCon.text);
+                  }
                 },
               ),
               // textField : PW
@@ -75,7 +81,7 @@ class _CreateAccountState extends State<CreateAccount> {
                 padding: const EdgeInsets.all(8.0),
                 child: CustomTextField(label: '비밀번호를 입력 하세요',
                 obscureText: true,
-                 controller: pwCon),
+                controller: pwCon),
               ),
               // textField : Name
               Padding(
@@ -116,10 +122,12 @@ class _CreateAccountState extends State<CreateAccount> {
     );
   }
 
-  // ------------ functions ---------------- //
-  // 중복확인 버튼 action
+// ------------------------------ functions --------------------------------- //
+// 1. 중복확인 버튼 action
   idDoubleCheck(String id) async {
-    int count = await handler.idDoubleCheck(id);
+    await selectUseridDoubleCheck(id);
+    int count = data[0]['count'];
+    // print(count); --- 2
     if (count == 0) {
       CustomDialogue().showDialogue(
         title: '확인 완료',
@@ -142,9 +150,17 @@ class _CreateAccountState extends State<CreateAccount> {
       );
     }
   }
-
-  // --------------------------------------- //
-  // 회원가입 버튼 action
+// -------------------------------------------------------------------------- //
+// 2. 사용자가 입력한 아이디 값을 데이터베이스에서 검색하여 일치하는 아이디가 있는지 중복 여부를 확인하는 함수
+// count = 0 : 중복 없음 / count = 1 중복 있음
+  selectUseridDoubleCheck(String userid)async{
+  var response = await http.get(Uri.parse("http://${globalip}:8000/changjun/selectUseridDoubleCheck?userid=$userid"));
+  data.clear();
+  data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
+  // print(data); --- 1
+  }
+// -------------------------------------------------------------------------- //
+// 3. 회원가입 버튼 action
   _createAccount() async {
     if (idCon.text.trim().isEmpty ||
         pwCon.text.trim().isEmpty ||
@@ -169,8 +185,8 @@ class _CreateAccountState extends State<CreateAccount> {
       insertUserAccount();
     }
   }
-// --------------------------------------- //
-// 3. 사용자가 입력한 정보를 database 에 insert 하는 함수
+// -------------------------------------------------------------------------- //
+// 4. 사용자가 입력한 정보를 database 에 insert 하는 함수
 insertUserAccount()async{
   var request = http.MultipartRequest(
     'POST', 
@@ -193,6 +209,5 @@ insertUserAccount()async{
     CustomSnackbar().showSnackbar(title: '오류', message: '회원 가입에 실패 하였습니다.', backgroundColor: Colors.red, textColor: Colors.white);
   }
 }
-// --------------------------------------- //
-
+// -------------------------------------------------------------------------- //
 }// class

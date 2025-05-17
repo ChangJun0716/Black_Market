@@ -87,14 +87,12 @@ class _LoginState extends State<Login> {
       ),
     );
   } // build
-
-  // ----- functions ----- //
-  // 로그인 버튼 action
+// -------------------- Functions --------------------------------- //
+// 1. 로그인 버튼 action
   loginCheck(String id, String pw) async {
     await getJSONData(id, pw);
     count = data[0]['count'];
     memberType = int.parse(data[0]['memberType']);
-
     if (count == 1) {
       // id,pw 일치하는 값이 있을 때
       CustomSnackbar().showSnackbar(
@@ -104,13 +102,15 @@ class _LoginState extends State<Login> {
         textColor: Colors.white,
       );
       if (memberType == 1) {
+        // 제품 리스트 페이지 (고객)
         saveStorage(memberType);
         Get.to(CustomerProductList());
       } else if (memberType == 2) {
+        // 본사 페이지 (본사 직원)
         saveStorage(memberType);
-        // 본사 페이지
         Get.to(CompanyHome());
       } else {
+        // 대리점 페이지 (대리 점주)
         saveStorage(memberType);
         Get.to(StoreHomePage());
       }
@@ -126,21 +126,19 @@ class _LoginState extends State<Login> {
       );
     }
   }
-
-  // --------------------------------------- //
-  // 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
+// ---------------------------------------------------------------- //
+// 2. 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
   getJSONData(String id, String pw)async{
     var response = await http.get(Uri.parse("http://${globalip}:8000/changjun/selectUser?userid=$id&password=$pw"));
     data.clear();
     data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
     // print(data); --- 1
   }
-  // --------------------------------------- //
-  // 로그인 성공 시 GetStorage 로 data 삽입
+// ---------------------------------------------------------------- //
+// 3. 로그인 성공 시 GetStorage 로 data 삽입
   saveStorage(int memberType) {
     box.write('uid', idCon.text);
     box.write('memberType', memberType);
   }
-
-  // --------------------------------------- //
+// ---------------------------------------------------------------- //
 } // class

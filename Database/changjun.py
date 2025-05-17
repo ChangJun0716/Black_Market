@@ -41,6 +41,17 @@ async def insertUserAccount(
         except Exception as e :
             print("Error : ", e)
             return {"result" : "Error" }
+# ----------------------------------------------------------------------------------- #
+# 2. 사용자가 회원가입을 할 때 아이디의 중복을 확인하기 위해 Database 에 입력한 값의 유무를 확인하는 함수
+@router.get('/selectUseridDoubleCheck')
+async def selectUseridDoubleCheck(userid : str):
+    conn = connect()
+    curs = conn.cursor()
+    curs.execute("SELECT count(*) From users WHERE userid =%s", (userid, ))
+    rows = curs.fetchall()
+    conn.close()
+    result = [{'count' : row[0]}for row in rows]
+    return {'results' : result}
 # ------------------------         Login.dart        -------------------------------- #
 # 1. 회원가입을 한 사용자가 앱을 사용하기 위해 ID 와 PW 를 입력하였을 때 database 와의 일치를 확인하는 함수
 @router.get("/selectUser")
@@ -52,7 +63,6 @@ async def selectUser(userid : str, password : str):
     conn.close()
     result = [{'count':row[0], 'memberType':row[1]}for row in rows]
     return {'results' : result}
-# ----------------------------------------------------------------------------------- #
 # ----------------------------------------------------------------------------------- #
 # ----------------------------------------------------------------------------------- #
 
