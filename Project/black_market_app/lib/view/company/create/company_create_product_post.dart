@@ -1,10 +1,9 @@
-//제품 게시글 작성
-//제품 게시글 작성
+// 제품 게시글 작성 - CompanyCreatePost.dart
+import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/product_registration.dart';
-import 'package:black_market_app/view/company/post/post_block.dart';
-import 'package:black_market_app/view/company/post/post_block_editor.dart';
 import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,7 +26,7 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
 
   final _titleController = TextEditingController();
   Uint8List? _thumbnail;
-  List<PostBlock> _blocks = [];
+  List<Uint8List> _additionalImages = [];
 
   final _formKey = GlobalKey<FormState>();
 
@@ -64,11 +63,32 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
     }
   }
 
+  Future<void> _pickMultipleImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage();
+
+    if (images != null) {
+      if (_additionalImages.length + images.length > 4) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('최대 4장까지만 선택할 수 있습니다.')),
+        );
+        return;
+      }
+
+      for (var img in images) {
+        final bytes = await img.readAsBytes();
+        _additionalImages.add(bytes);
+      }
+
+      setState(() {});
+    }
+  }
+
   Future<void> _savePost() async {
     final box = GetStorage();
     final userId = box.read('uid');
 
-    if (_formKey.currentState!.validate() && selectedProduct != null && _thumbnail != null && _blocks.isNotEmpty) {
+    if (_formKey.currentState!.validate() && selectedProduct != null && _thumbnail != null && _additionalImages.isNotEmpty) {
       final existing = await handler.getProductRegistrationByProductCode(selectedProduct!.productsCode.toString());
       if (existing != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('이미 해당 제품에 대한 게시글이 존재합니다.')));
@@ -80,7 +100,7 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
         pProductCode: selectedProduct!.productsCode.toString(),
         introductionPhoto: _thumbnail!,
         ptitle: _titleController.text,
-        contentBlocks: _blocks,
+        contentBlocks: _additionalImages,
       );
 
       showDialog(
@@ -94,7 +114,6 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
                 Text('User ID: ${post.paUserid}'),
                 Text('Product Code: ${post.pProductCode}'),
                 Text('Title: ${post.ptitle}'),
-                Text('Block 수: ${post.contentBlocks.length}'),
               ],
             ),
           ),
@@ -177,38 +196,6 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
                       validator: (value) => value == null ? '제품을 선택해주세요' : null,
                     ),
                   const SizedBox(height: 20),
-                  if (selectedProduct != null)
-                    Card(
-                      color: Colors.white10,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Image.memory(
-                              selectedProduct!.productsImage,
-                              height: 100,
-                              width: 100,
-                              fit: BoxFit.cover,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('제품명: ${selectedProduct!.productsName}', style: TextStyle(color: Colors.white)),
-                                  Text('색상: ${selectedProduct!.productsColor}', style: TextStyle(color: Colors.white)),
-                                  Text('사이즈: ${selectedProduct!.productsSize}', style: TextStyle(color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _titleController,
                     decoration: const InputDecoration(
@@ -220,25 +207,17 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       ElevatedButton(
                         onPressed: _pickThumbnail,
                         child: const Text('대표 이미지 선택'),
                       ),
+                      ElevatedButton(
+                        onPressed: _pickMultipleImages,
+                        child: const Text('추가 이미지 선택 (최대 4장)'),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_thumbnail != null)
-                    Image.memory(_thumbnail!, height: 150),
-                  const SizedBox(height: 16),
-                  PostBlockEditor(
-                    blocks: _blocks,
-                    onChanged: (updated) {
-                      setState(() {
-                        _blocks = updated;
-                      });
-                    },
                   ),
                   const SizedBox(height: 24),
                   Row(
