@@ -280,8 +280,8 @@ DROP TABLE IF EXISTS `productRegistration`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `productRegistration` (
-  `ptitle` int DEFAULT NULL,
-  `contentBlocks` blob,
+  `ptitle` text DEFAULT NULL,
+  `contentBlocks` text,
   `introductionPhoto` blob,
   `Purchase_purchaseId` int NOT NULL,
   `Purchase_users_userid` varchar(45) NOT NULL,
