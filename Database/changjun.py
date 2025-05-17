@@ -9,13 +9,15 @@ from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import Response
 from pydantic import BaseModel
 import pymysql
+#선언될 ip
+ip = "127.0.0.1"
 # -------------------------------- Property  ---------------------------------------- #
 router = APIRouter()
 
 # MySQL server host
 def connect():
     return pymysql.connect(
-        host="192.168.0.23",
+        host=ip,
         user="root",
         password="qwer1234",
         db="mydb",
