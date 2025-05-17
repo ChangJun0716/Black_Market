@@ -281,14 +281,12 @@ DROP TABLE IF EXISTS `productRegistration`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `productRegistration` (
   `ptitle` text DEFAULT NULL,
-  `contentBlocks` text,
+  `contentBlocks` longblob, 
   `introductionPhoto` blob,
-  `Purchase_purchaseId` int NOT NULL,
-  `Purchase_users_userid` varchar(45) NOT NULL,
+  `products_productsCode` int NOT NULL,
   `users_userid` varchar(45) NOT NULL,
-  PRIMARY KEY (`Purchase_purchaseId`,`Purchase_users_userid`,`users_userid`),
-  KEY `fk_productRegistration_users1_idx` (`users_userid`),
-  CONSTRAINT `fk_productRegistration_Purchase1` FOREIGN KEY (`Purchase_purchaseId`, `Purchase_users_userid`) REFERENCES `Purchase` (`purchaseId`, `users_userid`),
+  PRIMARY KEY (`products_productsCode`,`users_userid`),
+  CONSTRAINT `fk_productRegistration_products` FOREIGN KEY (`products_productsCode`) REFERENCES `products` (`productsCode`),
   CONSTRAINT `fk_productRegistration_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
