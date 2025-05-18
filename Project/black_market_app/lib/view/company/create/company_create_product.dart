@@ -1,10 +1,16 @@
-// 제품 등록
-import 'dart:typed_data';
+// 제품 등록 - 2팀 팀원 : 김수아 개발 
+//목적 : 
+//판매할 상품을 등록한다  
+//개발 일지 :
+//2025_05_17 
+//delate로 개발 했던 소스 mysql python 소스로 바꾸기 
+import 'dart:io';
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart'; 
-import 'package:black_market_app/model/products.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 
 class CompanyCreateProduct extends StatefulWidget {
   const CompanyCreateProduct({super.key});
@@ -20,73 +26,45 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
   final _priceController = TextEditingController();
   final _sizeController = TextEditingController();
   final _opriceController = TextEditingController();
-  late DatabaseHandler handler;
+  XFile? imageFile;
+  final ImagePicker picker = ImagePicker();
 
-  Uint8List? _imageBytes;
-
-  @override
-  void initState() {
-    super.initState();
-    handler = DatabaseHandler();
-  }
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _imageBytes = bytes;
-      });
-    }
-  }
-
-  Future<void> _submit() async {
-    if (_formKey.currentState!.validate() && _imageBytes != null) {
-      final product = Products(
-        productsColor: _colorController.text,
-        productsName: _nameController.text,
-        productsPrice: int.parse(_priceController.text),
-        productsOPrice: int.parse(_opriceController.text),
-        productsSize: int.parse(_sizeController.text),
-        productsImage: _imageBytes!,
-      );
-
+  getImageFromGallery(ImageSource imageSource)async{
+  final XFile? pickedFile = await picker.pickImage(source: imageSource);
+  imageFile = XFile(pickedFile!.path); 
+  setState(() {});
+}
+  //물건 넣는 거 
+   _submit() async {
+    if (_formKey.currentState!.validate() && imageFile != null) {
       try {
-        await handler.insertProduct(product);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("제품이 등록되었습니다.")),
+        var request = http.MultipartRequest(
+          "POST",
+          Uri.parse("http://$globalip:8000/kimsua/insert/products"),
         );
-        _opriceController.clear();
-        _colorController.clear();
-        _nameController.clear();
-        _priceController.clear();
-        _sizeController.clear();
-        setState(() {
-          _imageBytes = null;
-        });
+        request.fields['productsName'] = _nameController.text;
+        request.fields['productsColor'] = _colorController.text;
+        request.fields['productsSize'] = _sizeController.text;
+        request.fields['productsOPrice'] = _opriceController.text;
+        request.fields['productsPrice'] = _priceController.text;
+        request.files.add(await http.MultipartFile.fromPath('productsImage', imageFile!.path));
+
+        var res = await request.send();
+        if (res.statusCode == 200) {
+          _showDialog();
+        } else {
+          errorSnackBar();
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(" 등록 실패: ${e.toString()}")),
-        );
+        errorSnackBar();
       }
-    } else if (_imageBytes == null) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("이미지를 선택해주세요.")),
       );
     }
   }
 
-  @override
-  void dispose() {
-    _colorController.dispose();
-    _nameController.dispose();
-    _priceController.dispose();
-    _sizeController.dispose();
-    _opriceController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +72,7 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text("제품 등록하기",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: Text("제품 등록하기", style: TextStyle(color: Colors.white)),
       ),
       body: Center(
         child: Container(
@@ -107,8 +83,8 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
-              child: ListView(
-                children: [
+              child:ListView(
+                    children: [
                   _buildTextField(_colorController, '제품 컬러', TextInputType.text),
                   _buildTextField(_nameController, '제품명', TextInputType.text),
                   _buildTextField(_priceController, '판매 가격', TextInputType.number),
@@ -116,16 +92,16 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
                   _buildTextField(_sizeController, '사이즈', TextInputType.number),
                   SizedBox(height: 12),
                   CustomButton(
-                    onPressed: _pickImage,
+                    onPressed: () => getImageFromGallery(ImageSource.gallery),
                     text: '이미지 선택',
                   ),
-                  if (_imageBytes != null)
+                  if (imageFile != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          _imageBytes!,
+                        child: Image.file(
+                          File(imageFile!.path),
                           height: 150,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -146,8 +122,7 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
     );
   }
 
-  Widget _buildTextField(
-      TextEditingController controller, String label, TextInputType type) {
+  Widget _buildTextField(TextEditingController controller, String label, TextInputType type) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -157,9 +132,33 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
           labelText: label,
           border: OutlineInputBorder(),
         ),
-        validator: (value) =>
-            value == null || value.isEmpty ? '값을 입력하세요' : null,
+        validator: (value) => value == null || value.isEmpty ? '값을 입력하세요' : null,
       ),
+    );
+  }
+
+  _showDialog() {
+    Get.defaultDialog(
+      title: "입력 결과",
+      middleText: "입력이 완료 되었습니다.",
+      barrierDismissible: false,
+      actions: [
+        TextButton(
+          onPressed: () {
+            Get.back();
+            Get.back();
+          },
+          child: Text('OK'),
+        ),
+      ],
+    );
+  }
+
+  errorSnackBar() {
+    Get.snackbar(
+      'Error',
+      '입력시 문제가 발생했습니다.',
+      duration: Duration(seconds: 2),
     );
   }
 }

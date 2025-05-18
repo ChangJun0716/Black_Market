@@ -1,4 +1,12 @@
-// 제품 게시글 작성 
+//제품 게시글 작성 - 2팀 팀원 : 김수아 개발 
+//목적 : 
+//제품에 대한 게시글을 작성 할 수 있다  
+//개발 일지 :
+//2025_05_17 
+//대대적으로 원래 쓰던 방식을 다 갈아 엎음 
+//소개사진을 리스트에 담아 리스트 형식으로 mysql에 넣는 형식으로 바꿈 
+//모든 소스 globlaip 적용 완료 
+
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:black_market_app/global.dart';
@@ -17,13 +25,17 @@ class CompanyCreatePost extends StatefulWidget {
 }
 
 class _CompanyCreatePostState extends State<CompanyCreatePost> {
+  //제목을 받을 컨트롤러 
   final _titleController = TextEditingController();
   Uint8List? _thumbnail;
+  //소개 사진 여러개를 받을 리스트 
   List<XFile> _additionalImages = [];
   final _formKey = GlobalKey<FormState>();
-
+  //물건 리스트가 들어갈 리스트 
   List<Products> _products = [];
+  //물건이 등록이 안돈 샅애 일 수도 있어 ?
   Products? _selectedProduct;
+  //로딩 체크
   bool _isLoading = true;
 
   @override
@@ -34,7 +46,7 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
 
   Future<void> _loadProducts() async {
     try {
-      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/products'));
+      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/products/post'));
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
         setState(() {
@@ -63,24 +75,27 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
   Future<void> _pickMultipleImages() async {
     final picker = ImagePicker();
     final images = await picker.pickMultiImage();
-
+    // 이미지 선택 라인 4개 까지 제한을 주긴 해야됨 아님 버퍼 오버 풀러우 생길 꺼임 ㅇㅇ 
     if (images != null && images.length + _additionalImages.length <= 4) {
       setState(() {
         _additionalImages.addAll(images);
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
+        // ㅋㅋ 너무 많이 받으면 같은조안 창준님이 싫어 하셔서 제한을 둠 
         SnackBar(content: Text('최대 4장까지만 선택할 수 있습니다.')),
       );
     }
   }
 
   Future<void> _uploadPostToServer() async {
+    //아이디를 받아옴 
+    //get srorage 안에 넣어 놓고 로컬 사용 
     final box = GetStorage();
     final userId = box.read('uid');
 
     if (_formKey.currentState!.validate() && _thumbnail != null && _additionalImages.isNotEmpty && _selectedProduct != null) {
-      final uri = Uri.parse('http://${globalip}:8000/kimsua/insert/product');
+      final uri = Uri.parse('http://${globalip}:8000/kimsua/select/product/post');
       final request = http.MultipartRequest('POST', uri);
 
       request.fields['ptitle'] = _titleController.text;
@@ -92,7 +107,7 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
         final bytes = await _additionalImages[i].readAsBytes();
         request.files.add(http.MultipartFile.fromBytes('contentBlocks', bytes, filename: 'block_$i.jpg'));
       }
-
+    // 상황에 완료 코드를 보고 업로드에 해당하는 스낵바 생성
       try {
         final response = await request.send();
         if (response.statusCode == 200) {
