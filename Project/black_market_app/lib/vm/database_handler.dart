@@ -9,7 +9,6 @@ import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/model/products.dart';
 import 'package:black_market_app/model/purchase.dart';
 import 'package:black_market_app/model/purchase_detail.dart';
-import 'package:black_market_app/model/return_investigation.dart';
 import 'package:black_market_app/model/shopping_cart_from_purchase.dart';
 import 'package:black_market_app/model/stock_receipts.dart';
 import 'package:black_market_app/model/users.dart';
@@ -181,10 +180,12 @@ class DatabaseHandler {
     return result.map((e) => e['storeName'].toString()).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getAllProducts() async {
-    final db = await initializeDB();
-    return await db.rawQuery("SELECT * FROM products");
-  }
+  Future<List<Products>> getAllProducts() async {
+  final db = await initializeDB();
+  final List<Map<String, dynamic>> result = await db.query('products');
+  return result.map((e) => Products.fromMap(e)).toList(); 
+}
+
 
   Future<int> getTotalReceived(String productCode) async {
     final db = await initializeDB();
@@ -486,20 +487,6 @@ class DatabaseHandler {
     return result.map((e) => ProductRegistration.fromMap(e)).toList();
   }
 
-  //개시글 등록
-  //개시글 등록
-  Future<int> insertProductRegistration(ProductRegistration post) async {
-    final db = await initializeDB();
-    return await db.insert('productRegistration', {
-      'paUserid': post.paUserid,
-      'pProductCode': post.pProductCode,
-      'introductionPhoto': post.introductionPhoto,
-      'ptitle': post.ptitle,
-      'contentJson': jsonEncode(
-        post.contentBlocks.map((e) => e.toMap()).toList(),
-      ),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
 
   //같은 제품의 게시글이 올라가 있는지 확인
   Future<ProductRegistration?> getProductRegistrationByProductCode(
@@ -1331,7 +1318,7 @@ class DatabaseHandler {
       AND pStoreCode = ? 
       AND purchaseDeliveryStatus = '주문완료'
     ''',
-      [productCode.toString(), storeCode],
+      [productCode, storeCode],
     );
 
     return result

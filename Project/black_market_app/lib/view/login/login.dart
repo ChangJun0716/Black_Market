@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textbutton.dart';
@@ -6,10 +8,10 @@ import 'package:black_market_app/view/company/company_home.dart';
 import 'package:black_market_app/view/customer/product/customer_product_list.dart';
 import 'package:black_market_app/view/login/create_account.dart';
 import 'package:black_market_app/view/store_manager/store_home.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -19,15 +21,16 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  late DatabaseHandler handler;
   late TextEditingController idCon;
   late TextEditingController pwCon;
   final box = GetStorage();
+  List data = [];  // Databae 에서 받아온 data 를 담을 List
+  int count = 0;   // 입력한 값이 데이터베이스에 있는지 count 한 결과 : 0 - 없음, 1 - 있음
+  int memberType = 0; // count 가 1 인 회원이 가지고 있는 memberType : 1 - 고객, 2 - 본사직원, 3~ - 대리점주 
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     idCon = TextEditingController();
     pwCon = TextEditingController();
   }
@@ -84,28 +87,30 @@ class _LoginState extends State<Login> {
       ),
     );
   } // build
-
-  // ----- functions ----- //
-  // 로그인 버튼 action
+// -------------------- Functions --------------------------------- //
+// 1. 로그인 버튼 action
   loginCheck(String id, String pw) async {
-    int count = await handler.loginUsers(idCon.text, pwCon.text);
+    await getJSONData(id, pw);
+    count = data[0]['count'];
     if (count == 1) {
       // id,pw 일치하는 값이 있을 때
+      memberType = int.parse(data[0]['memberType']);
       CustomSnackbar().showSnackbar(
         title: '로그인 성공',
         message: '환영합니다.',
         backgroundColor: Colors.black,
         textColor: Colors.white,
       );
-      int memberType = await handler.userMemberType(id); // 회원 아이디로 분류코드 식별
       if (memberType == 1) {
+        // 제품 리스트 페이지 (고객)
         saveStorage(memberType);
         Get.to(CustomerProductList());
       } else if (memberType == 2) {
+        // 본사 페이지 (본사 직원)
         saveStorage(memberType);
-        // 본사 페이지
         Get.to(CompanyHome());
       } else {
+        // 대리점 페이지 (대리 점주)
         saveStorage(memberType);
         Get.to(StoreHomePage());
       }
@@ -121,13 +126,19 @@ class _LoginState extends State<Login> {
       );
     }
   }
-
-  // --------------------------------------- //
-  // 로그인 성공 시 GetStorage 로 data 삽입
+// ---------------------------------------------------------------- //
+// 2. 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
+  getJSONData(String id, String pw)async{
+    var response = await http.get(Uri.parse("http://${globalip}:8000/changjun/selectUser?userid=$id&password=$pw"));
+    data.clear();
+    data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
+    // print(data); --- 1
+  }
+// ---------------------------------------------------------------- //
+// 3. 로그인 성공 시 GetStorage 로 data 삽입
   saveStorage(int memberType) {
     box.write('uid', idCon.text);
     box.write('memberType', memberType);
   }
-
-  // --------------------------------------- //
+// ---------------------------------------------------------------- //
 } // class

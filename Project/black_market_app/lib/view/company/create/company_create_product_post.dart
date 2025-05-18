@@ -1,15 +1,21 @@
-//제품 게시글 작성
-//제품 게시글 작성
+//제품 게시글 작성 - 2팀 팀원 : 김수아 개발 
+//목적 : 
+//제품에 대한 게시글을 작성 할 수 있다  
+//개발 일지 :
+//2025_05_17 
+//대대적으로 원래 쓰던 방식을 다 갈아 엎음 
+//소개사진을 리스트에 담아 리스트 형식으로 mysql에 넣는 형식으로 바꿈 
+//모든 소스 globlaip 적용 완료 
+
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:black_market_app/model/products.dart';
-import 'package:black_market_app/model/product_registration.dart';
-import 'package:black_market_app/view/company/post/post_block.dart';
-import 'package:black_market_app/view/company/post/post_block_editor.dart';
-import 'package:black_market_app/vm/database_handler.dart';
+import 'package:black_market_app/global.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:black_market_app/model/products.dart';
 
 class CompanyCreatePost extends StatefulWidget {
   const CompanyCreatePost({super.key});
@@ -19,38 +25,40 @@ class CompanyCreatePost extends StatefulWidget {
 }
 
 class _CompanyCreatePostState extends State<CompanyCreatePost> {
-  late DatabaseHandler handler;
-  List<String> productNames = [];
-  List<Products> productList = [];
-  String? selectedProductName;
-  Products? selectedProduct;
-
+  //제목을 받을 컨트롤러 
   final _titleController = TextEditingController();
   Uint8List? _thumbnail;
-  List<PostBlock> _blocks = [];
-
+  //소개 사진 여러개를 받을 리스트 
+  List<XFile> _additionalImages = [];
   final _formKey = GlobalKey<FormState>();
+  //물건 리스트가 들어갈 리스트 
+  List<Products> _products = [];
+  //물건이 등록이 안돈 샅애 일 수도 있어 ?
+  Products? _selectedProduct;
+  //로딩 체크
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
-    _loadProductNames();
+    _loadProducts();
   }
 
-  Future<void> _loadProductNames() async {
-    final names = await handler.getDistinctProductNames();
-    setState(() {
-      productNames = names;
-    });
-  }
-
-  Future<void> _loadProductsByName(String name) async {
-    final list = await handler.getProductsByName(name);
-    setState(() {
-      productList = list;
-      selectedProduct = null;
-    });
+  Future<void> _loadProducts() async {
+    try {
+      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/products/post'));
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = json.decode(response.body);
+        setState(() {
+          _products = jsonList.map((e) => Products.fromMap(e)).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _pickThumbnail() async {
@@ -64,55 +72,53 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
     }
   }
 
-  Future<void> _savePost() async {
+  Future<void> _pickMultipleImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage();
+    // 이미지 선택 라인 4개 까지 제한을 주긴 해야됨 아님 버퍼 오버 풀러우 생길 꺼임 ㅇㅇ 
+    if (images != null && images.length + _additionalImages.length <= 4) {
+      setState(() {
+        _additionalImages.addAll(images);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        // ㅋㅋ 너무 많이 받으면 같은조안 창준님이 싫어 하셔서 제한을 둠 
+        SnackBar(content: Text('최대 4장까지만 선택할 수 있습니다.')),
+      );
+    }
+  }
+
+  Future<void> _uploadPostToServer() async {
+    //아이디를 받아옴 
+    //get srorage 안에 넣어 놓고 로컬 사용 
     final box = GetStorage();
     final userId = box.read('uid');
 
-    if (_formKey.currentState!.validate() && selectedProduct != null && _thumbnail != null && _blocks.isNotEmpty) {
-      final existing = await handler.getProductRegistrationByProductCode(selectedProduct!.productsCode.toString());
-      if (existing != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('이미 해당 제품에 대한 게시글이 존재합니다.')));
-        return;
+    if (_formKey.currentState!.validate() && _thumbnail != null && _additionalImages.isNotEmpty && _selectedProduct != null) {
+      final uri = Uri.parse('http://${globalip}:8000/kimsua/select/product/post');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.fields['ptitle'] = _titleController.text;
+      request.fields['products_productsCode'] = _selectedProduct!.productsCode.toString();
+      request.fields['users_userid'] = userId.toString();
+      request.files.add(http.MultipartFile.fromBytes('introductionPhoto', _thumbnail!, filename: 'thumbnail.jpg'));
+
+      for (var i = 0; i < _additionalImages.length; i++) {
+        final bytes = await _additionalImages[i].readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes('contentBlocks', bytes, filename: 'block_$i.jpg'));
       }
-
-      final post = ProductRegistration(
-        paUserid: userId,
-        pProductCode: selectedProduct!.productsCode.toString(),
-        introductionPhoto: _thumbnail!,
-        ptitle: _titleController.text,
-        contentBlocks: _blocks,
-      );
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('저장 내용 확인'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('User ID: ${post.paUserid}'),
-                Text('Product Code: ${post.pProductCode}'),
-                Text('Title: ${post.ptitle}'),
-                Text('Block 수: ${post.contentBlocks.length}'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await handler.insertProductRegistration(post);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('게시글이 저장되었습니다.')));
-                Get.back();
-              },
-              child: Text('확인'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('모든 항목을 입력해주세요.')));
+    // 상황에 완료 코드를 보고 업로드에 해당하는 스낵바 생성
+      try {
+        final response = await request.send();
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('게시글이 저장되었습니다.')));
+          Get.back();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 실패')));
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('에러 발생: $e')));
+      }
     }
   }
 
@@ -124,138 +130,77 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
         backgroundColor: Colors.black,
         title: const Text('게시글 작성', style: TextStyle(color: Colors.white)),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Container(
-            width: 800,
-            padding: const EdgeInsets.all(16),
-            color: Colors.black,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: DropdownButtonFormField<String>(
-                      value: selectedProductName,
-                      dropdownColor: Colors.white,
-                      hint: const Text('상품명 선택'),
-                      items: productNames.map((name) {
-                        return DropdownMenuItem(
-                          value: name,
-                          child: Text(name),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedProductName = value;
-                          selectedProduct = null;
-                        });
-                        if (value != null) _loadProductsByName(value);
-                      },
-                      validator: (value) => value == null ? '상품명을 선택해주세요' : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (productList.isNotEmpty)
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     DropdownButtonFormField<Products>(
-                      value: selectedProduct,
-                      dropdownColor: Colors.white,
-                      hint: const Text('세부 상품 선택'),
-                      items: productList.map((product) {
+                      value: _selectedProduct,
+                      hint: const Text('제품 선택'),
+                      items: _products.map((product) {
                         return DropdownMenuItem(
                           value: product,
-                          child: Text('${product.productsColor}, ${product.productsSize}'),
+                          child: Text('${product.productsName} (${product.productsCode})'),
                         );
                       }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedProduct = value;
-                        });
-                      },
+                      onChanged: (value) => setState(() => _selectedProduct = value),
                       validator: (value) => value == null ? '제품을 선택해주세요' : null,
                     ),
-                  const SizedBox(height: 20),
-                  if (selectedProduct != null)
-                    Card(
-                      color: Colors.white10,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Image.memory(
-                              selectedProduct!.productsImage,
-                              height: 100,
-                              width: 100,
-                              fit: BoxFit.cover,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('제품명: ${selectedProduct!.productsName}', style: TextStyle(color: Colors.white)),
-                                  Text('색상: ${selectedProduct!.productsColor}', style: TextStyle(color: Colors.white)),
-                                  Text('사이즈: ${selectedProduct!.productsSize}', style: TextStyle(color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                          ],
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: '제목',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      validator: (value) => value == null || value.isEmpty ? '제목을 입력해주세요' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _pickThumbnail,
+                          child: const Text('대표 이미지 선택'),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _pickMultipleImages,
+                          child: const Text('소개 이미지 선택 (최대 4장)'),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: '제목',
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (value) => value == null || value.isEmpty ? '제목을 입력해주세요' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _pickThumbnail,
-                        child: const Text('대표 이미지 선택'),
+                    const SizedBox(height: 16),
+                    if (_additionalImages.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        children: _additionalImages.map((xfile) => FutureBuilder<Uint8List>(
+                          future: xfile.readAsBytes(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                              return Image.memory(snapshot.data!, width: 100, height: 100, fit: BoxFit.cover);
+                            }
+                            return const SizedBox(width: 100, height: 100);
+                          },
+                        )).toList(),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_thumbnail != null)
-                    Image.memory(_thumbnail!, height: 150),
-                  const SizedBox(height: 16),
-                  PostBlockEditor(
-                    blocks: _blocks,
-                    onChanged: (updated) {
-                      setState(() {
-                        _blocks = updated;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _savePost,
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: _uploadPostToServer,
                         child: const Text('저장하기'),
                       ),
-                    ],
-                  )
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -13,7 +13,13 @@
 
 
 
-***Date*** : 2025.05.02 ~ 2025.05.08
+***Date*** : 
+
+
+1차 db라이트를 사용한 개발 
+2025.05.02 ~ 2025.05.08
+2차 mysql를 사용한 개발 
+2025.05.16 ~ 2025.05.20
 
 ***Author*** : ChangJun Lee, Sua Kim, Inwhan Kang, Sanghoon Lee
 
