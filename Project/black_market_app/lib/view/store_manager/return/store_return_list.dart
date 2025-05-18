@@ -1,153 +1,124 @@
-// store_return_list.dart
+import 'package:black_market_app/global.dart';
 import 'package:flutter/material.dart';
-import 'package:black_market_app/vm/database_handler.dart'; // DatabaseHandler 임포트
-// import 'package:black_market_app/model/purchase.dart'; // 모델은 직접 사용되지 않습니다.
-import 'package:black_market_app/utility/custom_button_calender.dart'; // CustomButtonCalender 사용
-import 'store_return_application.dart'; // 반품 신청 페이지 임포트
-import 'package:get/get.dart'; // GetX 임포트 (Snackbar 사용)
-import 'package:get_storage/get_storage.dart'; // GetStorage 임포트
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import 'store_return_application.dart';
 
 class StoreReturnList extends StatefulWidget {
   const StoreReturnList({super.key});
 
   @override
-  _StoreReturnListState createState() => _StoreReturnListState();
+  State<StoreReturnList> createState() => _StoreReturnListState();
 }
 
 class _StoreReturnListState extends State<StoreReturnList> {
-  DateTime? selectedDate; // 선택한 날짜
-  List<Map<String, dynamic>> returnList = []; // 반품 목록 (Map 형태)
+  final Map<String, dynamic>? _arguments = Get.arguments;
 
-  // GetStorage에서 읽어온 사용자 ID
   String? _loggedInUserId;
+  String? _loggedInStoreCode;
 
-  // 로그인된 대리점 코드 (사용자 ID로 조회)
-  String? _loggedInStoreCode; // 초기값 null
-  bool _isLoadingStoreCode = true; // storeCode 로딩 상태
+  DateTime? _selectedDate;
+  List<Map<String, dynamic>> returnList = [];
 
-  // DatabaseHandler 인스턴스
-  late DatabaseHandler _handler;
-  final box = GetStorage(); // GetStorage 인스턴스
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _handler = DatabaseHandler(); // 핸들러 인스턴스 생성
 
-    // GetStorage에서 로그인된 사용자 ID 읽어오기
-    _loggedInUserId = box.read('uid');
-    print('>>> StoreReturnList: GetStorage에서 읽어온 uid=$_loggedInUserId'); // 로깅
+    _loggedInUserId = _arguments?['userId'] as String?;
+    _loggedInStoreCode = _arguments?['storeCode'] as String?;
 
-    // 사용자 ID가 유효한 경우 해당 사용자의 storeCode 가져오기 시작
-    if (_loggedInUserId != null) {
-      _fetchStoreCodeByUserId(_loggedInUserId!); // storeCode 가져온 후 데이터 로딩
+    if (_loggedInUserId != null && _loggedInUserId!.isNotEmpty) {
+      _selectedDate = DateTime.now();
+      _fetchReturns(_selectedDate!, _loggedInUserId!);
     } else {
-      // 사용자 ID를 찾지 못한 경우 처리
-      print('>>> StoreReturnList: GetStorage에 유효한 사용자 ID가 없습니다.');
-      _isLoadingStoreCode = false; // 로딩 완료 처리 (실패)
-      _loggedInStoreCode = null; // storeCode 상태 초기화
-      // 사용자에게 알림 또는 로그인 페이지로 강제 이동 고려
       Get.snackbar(
         '오류',
-        '로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
+        '사용자 정보를 가져오지 못했습니다. 홈 화면으로 돌아가주세요.',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
   }
 
-  // 사용자 ID로 대리점 코드를 가져오는 메서드 및 데이터 로딩 시작
-  Future<void> _fetchStoreCodeByUserId(String userId) async {
-    print('>>> StoreReturnList: 사용자 ID ($userId)로 대리점 코드 가져오기 시도'); // 로깅
-    try {
-      // DatabaseHandler의 getStoreCodeByUserId 메서드를 사용하여 storeCode 가져오기
-      final String? storeCode = await _handler.getStoreCodeByUserId(userId);
-      print('>>> StoreReturnList: 검색된 storeCode = $storeCode'); // 로깅
-
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate) {
       setState(() {
-        _loggedInStoreCode = storeCode; // storeCode 상태 업데이트
-        _isLoadingStoreCode = false; // storeCode 로딩 완료
+        _selectedDate = picked;
       });
+      _fetchReturns(_selectedDate!, _loggedInUserId!);
+    }
+  }
 
-      if (storeCode != null) {
-        // storeCode를 가져온 후 초기 데이터 로딩 시작 (오늘 날짜 기준)
-        fetchReturns(DateTime.now(), _loggedInStoreCode!); // storeCode 사용
+  void _fetchReturns(DateTime date, String userId) async {
+    setState(() {
+      _isLoading = true;
+      returnList.clear();
+    });
+
+    try {
+      final String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+      final String apiUrl =
+          "http://$globalip:8000/inhwan/store/returns/?date=$formattedDate&user_id=$userId";
+
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+
+        if (responseData['result'] == 'OK' &&
+            responseData.containsKey('results')) {
+          List<dynamic> results = responseData['results'];
+
+          List<Map<String, dynamic>> fetchedReturns =
+              results.map((item) => item as Map<String, dynamic>).toList();
+
+          setState(() {
+            returnList = fetchedReturns;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            returnList = [];
+            _isLoading = false;
+          });
+          Get.snackbar(
+            '알림',
+            responseData['message'] ?? '매장 반품 목록을 가져오는데 실패했습니다.',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
+        }
       } else {
-        // storeCode를 찾을 수 없는 경우 (daffiliation 테이블에 정보 없음)
-        print(
-          '>>> StoreReturnList: 사용자 ID ($userId)에 연결된 대리점 코드를 찾을 수 없습니다.',
-        ); // 로깅
+        setState(() {
+          returnList = [];
+          _isLoading = false;
+        });
         Get.snackbar(
           '오류',
-          '소속 대리점 정보를 찾을 수 없습니다. 관리자에게 문의하세요.',
+          '매장 반품 목록을 가져오는데 실패했습니다: 상태 코드 ${response.statusCode}',
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      print('>>> StoreReturnList: 대리점 코드 가져오는 중 오류 발생: ${e.toString()}'); // 로깅
-      setState(() {
-        _loggedInStoreCode = null; // 오류 시 storeCode 초기화
-        _isLoadingStoreCode = false; // storeCode 로딩 완료 (오류)
-      });
-      Get.snackbar(
-        '오류',
-        '대리점 정보를 가져오는데 실패했습니다: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // 선택한 날짜와 대리점 코드(현재는 사용 안 함)에 맞는 반품 기록을 가져와 현재 사용자 ID로 필터링하는 메서드
-  // storeCode 인자는 현재 스키마로 직접적인 대리점 필터링에 사용되지 않음
-  void fetchReturns(DateTime date, String storeCode) async {
-    // storeCode 인자는 남아 있지만 현재 필터링에는 사용 안 함
-    // 현재 로그인된 사용자 ID 유효성 체크
-    if (_loggedInUserId == null || _loggedInUserId!.isEmpty) {
-      print('>>> fetchReturns: 로그인된 사용자 ID가 유효하지 않습니다. 데이터 로딩 중단.');
       setState(() {
         returnList = [];
+        _isLoading = false;
       });
       Get.snackbar(
         '오류',
-        '로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return; // 함수 종료
-    }
-
-    try {
-      // DatabaseHandler를 통해 해당 날짜의 모든 반품 기록 가져오기 (현재 스키마로 대리점 필터링 불가능)
-      final fetchedReturns = await _handler.getReturnsByDate(
-        date,
-      ); // 날짜로만 필터링된 전체 반품 목록
-
-      // 가져온 전체 반품 목록에서 현재 로그인한 사용자 ID로 반품 신청된 기록만 필터링
-      final filteredReturns =
-          fetchedReturns.where((item) {
-            // item['ruserId'] 컬럼이 존재하고 현재 로그인된 사용자 ID와 일치하는 항목만 선택
-            // Map에서 'ruserId' 키는 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
-            final itemUserId = item['ruserId']?.toString();
-            return itemUserId != null && itemUserId == _loggedInUserId;
-          }).toList();
-
-      setState(() {
-        returnList = filteredReturns; // 필터링된 목록으로 상태 업데이트
-      });
-      print(
-        '>>> 반품 기록 필터링 결과: ${returnList.length} 개 (사용자 ID: $_loggedInUserId 기준)',
-      ); // 로깅
-    } catch (e) {
-      // 에러 처리 로직 추가 (예: 에러 메시지 표시)
-      print('반품 기록을 가져오는 중 오류 발생: ${e.toString()}');
-      setState(() {
-        returnList = []; // 오류 발생 시 목록 초기화
-      });
-      Get.snackbar(
-        '오류',
-        '반품 목록을 가져오는데 실패했습니다: ${e.toString()}',
+        '매장 반품 목록 로딩 중 오류 발생: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -155,270 +126,198 @@ class _StoreReturnListState extends State<StoreReturnList> {
   }
 
   @override
-  Widget build(context) {
-    // GetX 사용을 위해 context 대신 build(context) 사용
-    // storeCode 로딩 중이거나 로딩 실패 시 로딩 인디케이터 또는 오류 메시지 표시
-    if (_isLoadingStoreCode) {
-      return Scaffold(
-        appBar: AppBar(title: Text('반품 기록 로딩 중...')),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    } else if (_loggedInStoreCode == null) {
-      // storeCode 로딩 실패
-      return Scaffold(
-        appBar: AppBar(title: Text('매장 반품 목록 오류')),
-        body: Center(
-          child: Text(
-            '대리점 정보를 가져오는데 실패했습니다.',
-            style: TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-    }
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('매장 반품 목록')), // 제목 (필요하다면 대리점 이름 추가)
+      appBar: AppBar(
+        title: const Text("매장 반품 목록"),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 자식들을 가로로 늘이기
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 날짜 선택 버튼
-            CustomButtonCalender(
-              // CustomButtonCalender 사용
-              label:
-                  selectedDate == null
-                      ? '날짜 선택'
-                      : '${selectedDate!.toLocal()}'.split(' ')[0], // 선택된 날짜 표시
-              onDateSelected: (DateTime date) {
-                // CustomButtonCalender에서 날짜 선택 시 호출
-                setState(() {
-                  selectedDate = date; // 선택한 날짜 상태 업데이트
-                });
-                // 날짜 선택 후 해당 날짜의 반품 기록 가져오기
-                if (_loggedInStoreCode != null) {
-                  // storeCode 유효성 체크 추가
-                  fetchReturns(date, _loggedInStoreCode!); // storeCode 사용
-                } else {
-                  Get.snackbar(
-                    '오류',
-                    '대리점 정보가 로딩되지 않았습니다.',
-                    backgroundColor: Colors.red,
-                    colorText: Colors.white,
-                  );
-                }
-              },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () => _selectDate(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 15,
+                      ),
+                      textStyle: TextStyle(fontSize: 16),
+                    ),
+                    child: Text(
+                      _selectedDate == null
+                          ? '날짜 선택'
+                          : DateFormat('yyyy-MM-dd').format(_selectedDate!),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  flex: 1,
+                  child: ElevatedButton(
+                    onPressed:
+                        (_loggedInUserId != null &&
+                                _loggedInUserId!.isNotEmpty &&
+                                _loggedInStoreCode != null &&
+                                _loggedInStoreCode!.isNotEmpty)
+                            ? () {
+                              Get.to(
+                                () => StoreReturnApplication(),
+                                arguments: {
+                                  'userId': _loggedInUserId,
+                                  'storeCode': _loggedInStoreCode,
+                                },
+                              );
+                            }
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 15,
+                      ),
+                      textStyle: TextStyle(fontSize: 16),
+                    ),
+                    child: const Text('반품 신청'),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 16),
-            // 반품 목록 표시 영역
             Expanded(
-              // Column 내에서 ListView가 남은 공간을 차지하도록 Expanded 사용
               child: Container(
-                padding: EdgeInsets.all(8.0), // Container 내부 패딩 조정
+                padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // 헤더와 목록 정렬
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 데이터 목록의 헤더 (컬럼 이름)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 4.0,
                         horizontal: 8.0,
-                      ), // 헤더 패딩 조정
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 반품 코드를 주문 번호 대신 표시합니다.
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '주문 번호 (반품 코드)',
+                              '반품 코드',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '회원 ID',
+                              '반품 날짜',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '제품 번호',
+                              '처리 상태',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
-                            flex: 1,
+                            flex: 3,
                             child: Text(
-                              '색상',
+                              '반품 사유',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
-                          Expanded(
-                            flex: 1,
-                            child: Text(
-                              '사이즈',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ), // 글씨 크기 조정
+                          ),
                         ],
                       ),
                     ),
-                    Divider(height: 1, thickness: 1), // 헤더와 목록 구분선, 높이 조정
-                    // 반품 목록 표시
-                    Expanded(
-                      // Column 내에서 ListView가 남은 공간을 차지하도록 Expanded 사용
-                      child:
-                          returnList.isEmpty &&
-                                  selectedDate !=
-                                      null // 날짜 선택 후 데이터가 없을 때 메시지 표시
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Text(
-                                    '선택하신 날짜 (${selectedDate!.toLocal().toString().split(' ')[0]})에 해당하는 반품 기록이 없습니다.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                    Divider(height: 1, thickness: 1, color: Colors.grey),
+                    _isLoading
+                        ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                        : returnList.isEmpty && _selectedDate != null
+                        ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: Text('해당 날짜에 반품 기록이 없습니다.')),
+                        )
+                        : Expanded(
+                          child: ListView.builder(
+                            itemCount: returnList.length,
+                            itemBuilder: (context, index) {
+                              final returnItem = returnList[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0,
+                                  horizontal: 8.0,
                                 ),
-                              )
-                              : selectedDate ==
-                                  null // 날짜를 선택하지 않았을 때 초기 메시지
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Text(
-                                    '날짜를 선택하여 반품 기록을 확인하세요.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        returnItem['returnCode']?.toString() ??
+                                            '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ),
-                                  ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        returnItem['returnDate'] ?? '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        returnItem['processionStatus'] ?? '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        returnItem['returnReason'] ?? '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                              : ListView.builder(
-                                // 데이터가 있을 때 목록 표시
-                                itemCount: returnList.length,
-                                itemBuilder: (context, index) {
-                                  final returnData =
-                                      returnList[index]; // Map 형태의 데이터 항목
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                      horizontal: 8.0,
-                                    ), // 목록 항목 패딩 조정
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        // Map 키 이름은 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            returnData['returnCode']
-                                                    ?.toString() ??
-                                                '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // returnCode는 int
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            returnData['ruserId'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // ruserId 케이스 반영
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            returnData['rProductCode'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // rProductCode 케이스 반영
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            returnData['productsColor'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // productsColor 케이스 반영
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            returnData['productsSize']
-                                                    ?.toString() ??
-                                                '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // productsSize 케이스 반영
-                                        // 만약 반품 날짜나 처리 상태도 표시하고 싶다면 컬럼 추가 및 Map 키 사용
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            returnData['returnDate'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ),
-                                        // Expanded(flex: 2, child: Text(returnData['processionStatus'] ?? '', style: TextStyle(fontSize: 12))), // processionStatus 케이스 반영
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                    ),
+                              );
+                            },
+                          ),
+                        ),
                   ],
                 ),
-              ),
-            ),
-            SizedBox(height: 16),
-            // 반품 신청 페이지로 이동하는 버튼
-            Align(
-              // 오른쪽 아래 정렬
-              alignment: Alignment.bottomRight,
-              child: ElevatedButton(
-                // 표준 ElevatedButton 사용
-                onPressed: () {
-                  // 널이 아닌 함수 전달
-                  // StoreReturnApplication 페이지도 storeCode가 필요하다면 GetStorage에서 읽거나 여기서 전달
-                  // 하위 페이지에서 GetStorage를 읽도록 수정했으므로 인자 전달 제거
-                  if (_loggedInStoreCode != null) {
-                    // storeCode 유효성 체크 추가
-                    Get.to(() => StoreReturnApplication()); // 인자 전달 제거
-                  } else {
-                    Get.snackbar(
-                      '오류',
-                      '대리점 정보가 로딩되지 않았습니다.',
-                      backgroundColor: Colors.red,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-                child: Text('반품 신청'),
               ),
             ),
           ],

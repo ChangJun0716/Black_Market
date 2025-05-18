@@ -24,9 +24,10 @@ class _LoginState extends State<Login> {
   late TextEditingController idCon;
   late TextEditingController pwCon;
   final box = GetStorage();
-  List data = [];  // Databae 에서 받아온 data 를 담을 List
-  int count = 0;   // 입력한 값이 데이터베이스에 있는지 count 한 결과 : 0 - 없음, 1 - 있음
-  int memberType = 0; // count 가 1 인 회원이 가지고 있는 memberType : 1 - 고객, 2 - 본사직원, 3~ - 대리점주 
+  List data = []; // Databae 에서 받아온 data 를 담을 List
+  int count = 0; // 입력한 값이 데이터베이스에 있는지 count 한 결과 : 0 - 없음, 1 - 있음
+  int memberType =
+      0; // count 가 1 인 회원이 가지고 있는 memberType : 1 - 고객, 2 - 본사직원, 3~ - 대리점주
 
   @override
   void initState() {
@@ -47,11 +48,9 @@ class _LoginState extends State<Login> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(30.0),
-                child: Text('Black Market',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 35
-                ),
+                child: Text(
+                  'Black Market',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 35),
                 ),
               ),
               // textField : id
@@ -65,7 +64,8 @@ class _LoginState extends State<Login> {
                 child: CustomTextField(
                   label: '비밀번호를 입력 하세요',
                   obscureText: true,
-                  controller: pwCon),
+                  controller: pwCon,
+                ),
               ),
               // button : login
               CustomButton(
@@ -87,8 +87,9 @@ class _LoginState extends State<Login> {
       ),
     );
   } // build
-// -------------------- Functions --------------------------------- //
-// 1. 로그인 버튼 action
+
+  // -------------------- Functions --------------------------------- //
+  // 1. 로그인 버튼 action
   loginCheck(String id, String pw) async {
     await getJSONData(id, pw);
     count = data[0]['count'];
@@ -112,7 +113,7 @@ class _LoginState extends State<Login> {
       } else {
         // 대리점 페이지 (대리 점주)
         saveStorage(memberType);
-        Get.to(StoreHomePage());
+        Get.to(StoreHome());
       }
       idCon.text = '';
       pwCon.text = '';
@@ -126,19 +127,26 @@ class _LoginState extends State<Login> {
       );
     }
   }
-// ---------------------------------------------------------------- //
-// 2. 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
-  getJSONData(String id, String pw)async{
-    var response = await http.get(Uri.parse("http://${globalip}:8000/changjun/selectUser?userid=$id&password=$pw"));
+
+  // ---------------------------------------------------------------- //
+  // 2. 로그인 버튼 클릭 시 사용자가 입력한 값이 데이터 베이스에 있는지 확인하고 memberType 도 함께 가져오는 함수
+  getJSONData(String id, String pw) async {
+    var response = await http.get(
+      Uri.parse(
+        "http://${globalip}:8000/changjun/selectUser?userid=$id&password=$pw",
+      ),
+    );
     data.clear();
     data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
     // print(data); --- 1
   }
-// ---------------------------------------------------------------- //
-// 3. 로그인 성공 시 GetStorage 로 data 삽입
+
+  // ---------------------------------------------------------------- //
+  // 3. 로그인 성공 시 GetStorage 로 data 삽입
   saveStorage(int memberType) {
     box.write('uid', idCon.text);
     box.write('memberType', memberType);
   }
-// ---------------------------------------------------------------- //
+
+  // ---------------------------------------------------------------- //
 } // class
