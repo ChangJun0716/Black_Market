@@ -1,189 +1,170 @@
-// store_check_inventory.dart
 import 'package:flutter/material.dart';
-import 'package:black_market_app/vm/database_handler.dart'; // DatabaseHandler 임포트
-import 'package:black_market_app/utility/custom_button_calender.dart'; // CustomButtonCalender 사용
-import 'package:get/get.dart'; // GetX 임포트 (Snackbar 사용)
-import 'package:get_storage/get_storage.dart'; // GetStorage 임포트
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+
+import '../../global.dart';
 
 class StoreCheckInventory extends StatefulWidget {
   const StoreCheckInventory({super.key});
 
   @override
-  _StoreCheckInventoryState createState() => _StoreCheckInventoryState();
+  State<StoreCheckInventory> createState() => _StoreCheckInventoryState();
 }
 
 class _StoreCheckInventoryState extends State<StoreCheckInventory> {
-  DateTime? startDate; // 시작 날짜
-  DateTime? endDate; // 종료 날짜
-  List<Map<String, dynamic>> receivedInventoryList = []; // 입고된 재고 목록 (Map 형태)
-  int totalReceivedQuantity = 0; // 총 입고 수량 합계
+  final GetStorage _box = GetStorage();
 
-  // GetStorage에서 읽어온 사용자 ID
+  final String? _storeCode = Get.arguments;
   String? _loggedInUserId;
 
-  // 로그인된 대리점 코드 (사용자 ID로 조회)
-  String? _loggedInStoreCode; // 초기값 null
-  bool _isLoadingStoreCode = true; // storeCode 로딩 상태
+  DateTime? _startDate;
+  DateTime? _endDate;
+  List<Map<String, dynamic>> inventoryList = [];
+  int _totalQuantity = 0;
 
-  // DatabaseHandler 인스턴스
-  late DatabaseHandler _handler;
-  final box = GetStorage(); // GetStorage 인스턴스
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _handler = DatabaseHandler(); // 핸들러 인스턴스 생성
+    _loggedInUserId = _box.read('uid');
 
-    // GetStorage에서 로그인된 사용자 ID 읽어오기
-    _loggedInUserId = box.read('uid');
-    print(
-      '>>> StoreCheckInventory: GetStorage에서 읽어온 uid=$_loggedInUserId',
-    ); // 로깅
+    _endDate = DateTime.now();
+    _startDate = _endDate!.subtract(const Duration(days: 7));
 
-    // 사용자 ID가 유효한 경우 해당 사용자의 storeCode 가져오기 시작
-    if (_loggedInUserId != null) {
-      _fetchStoreCodeByUserId(_loggedInUserId!); // storeCode 가져온 후 데이터 로딩
+    if (_loggedInUserId != null && _loggedInUserId!.isNotEmpty) {
+      _fetchInventory(_startDate!, _endDate!, _loggedInUserId!);
     } else {
-      // 사용자 ID를 찾지 못한 경우 처리
-      print('>>> StoreCheckInventory: GetStorage에 유효한 사용자 ID가 없습니다.');
-      _isLoadingStoreCode = false; // 로딩 완료 처리 (실패)
-      _loggedInStoreCode = null; // storeCode 상태 초기화
-      // 사용자에게 알림 또는 로그인 페이지로 강제 이동 고려
       Get.snackbar(
         '오류',
-        '로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
+        '사용자 정보를 가져오지 못했습니다. 홈 화면으로 돌아가주세요.',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
     }
   }
 
-  // 사용자 ID로 대리점 코드를 가져오는 메서드 및 데이터 로딩 시작
-  Future<void> _fetchStoreCodeByUserId(String userId) async {
-    print('>>> StoreCheckInventory: 사용자 ID ($userId)로 대리점 코드 가져오기 시도'); // 로깅
-    try {
-      // DatabaseHandler의 getStoreCodeByUserId 메서드를 사용하여 storeCode 가져오기
-      final String? storeCode = await _handler.getStoreCodeByUserId(userId);
-      print('>>> StoreCheckInventory: 검색된 storeCode = $storeCode'); // 로깅
+  Future<void> _selectDate(
+    BuildContext context, {
+    required bool isStartDate,
+  }) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate:
+          isStartDate
+              ? (_startDate ?? DateTime.now())
+              : (_endDate ?? DateTime.now()),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
 
+    if (picked != null) {
       setState(() {
-        _loggedInStoreCode = storeCode; // storeCode 상태 업데이트
-        _isLoadingStoreCode = false; // storeCode 로딩 완료
+        if (isStartDate) {
+          _startDate = picked;
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = picked;
+          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+            _startDate = _endDate;
+          }
+        }
       });
+      if (_startDate != null && _endDate != null) {
+        final DateTime adjustedEndDate = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          23,
+          59,
+          59,
+        );
+        _fetchInventory(_startDate!, adjustedEndDate, _loggedInUserId!);
+      }
+    }
+  }
 
-      if (storeCode != null) {
-        // storeCode를 가져온 후 초기 데이터 로딩 시작
-        // 현재 날짜 기준 1주일 범위 등으로 설정하여 로딩
-        DateTime now = DateTime.now();
-        startDate = DateTime(
-          now.year,
-          now.month,
-          now.day,
-        ).subtract(Duration(days: 7)); // 7일 전
-        endDate = DateTime(now.year, now.month, now.day); // 오늘 날짜
-        fetchReceivedInventory(
-          startDate!,
-          endDate!,
-          userId,
-          _loggedInStoreCode!,
-        ); // storeCode 사용
+  void _fetchInventory(
+    DateTime startDate,
+    DateTime endDate,
+    String userId,
+  ) async {
+    setState(() {
+      _isLoading = true;
+      inventoryList.clear();
+      _totalQuantity = 0;
+    });
+
+    try {
+      final String formattedStartDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(startDate);
+      final String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+
+      final String apiUrl =
+          "http://$globalip:8000/inhwan/store/inventory/?start_date=$formattedStartDate&end_date=$formattedEndDate&user_id=$userId";
+
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+
+        if (responseData['result'] == 'OK' &&
+            responseData.containsKey('results')) {
+          List<dynamic> results = responseData['results'];
+          List<Map<String, dynamic>> fetchedInventory =
+              results.map((item) => item as Map<String, dynamic>).toList();
+
+          int calculatedTotalQuantity = 0;
+          for (var item in fetchedInventory) {
+            calculatedTotalQuantity += (item['receivedQuantity'] as int? ?? 0);
+          }
+
+          setState(() {
+            inventoryList = fetchedInventory;
+            _totalQuantity = calculatedTotalQuantity;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            inventoryList = [];
+            _totalQuantity = 0;
+            _isLoading = false;
+          });
+          Get.snackbar(
+            '알림',
+            responseData['message'] ?? '매장 재고 현황을 가져오는데 실패했습니다.',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
+        }
       } else {
-        // storeCode를 찾을 수 없는 경우 (daffiliation 테이블에 정보 없음)
-        print(
-          '>>> StoreCheckInventory: 사용자 ID ($userId)에 연결된 대리점 코드를 찾을 수 없습니다.',
-        ); // 로깅
+        setState(() {
+          inventoryList = [];
+          _totalQuantity = 0;
+          _isLoading = false;
+        });
         Get.snackbar(
           '오류',
-          '소속 대리점 정보를 찾을 수 없습니다. 관리자에게 문의하세요.',
+          '매장 재고 현황을 가져오는데 실패했습니다: 상태 코드 ${response.statusCode}',
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      print(
-        '>>> StoreCheckInventory: 대리점 코드 가져오는 중 오류 발생: ${e.toString()}',
-      ); // 로깅
       setState(() {
-        _loggedInStoreCode = null; // 오류 시 storeCode 초기화
-        _isLoadingStoreCode = false; // storeCode 로딩 완료 (오류)
+        inventoryList = [];
+        _totalQuantity = 0;
+        _isLoading = false;
       });
       Get.snackbar(
         '오류',
-        '대리점 정보를 가져오는데 실패했습니다: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // 선택한 날짜 범위와 사용자 ID, 대리점 코드에 맞는 재고 수령 정보를 가져오는 메서드
-  // storeCode 인자 추가 및 사용
-  void fetchReceivedInventory(
-    DateTime start,
-    DateTime end,
-    String userId,
-    String storeCode,
-  ) async {
-    // storeCode 인자 추가
-    // storeCode 인자 유효성 체크
-    if (storeCode == null || storeCode.isEmpty) {
-      print('>>> fetchReceivedInventory: storeCode 인자가 유효하지 않습니다.');
-      setState(() {
-        receivedInventoryList = [];
-        totalReceivedQuantity = 0;
-      });
-      return; // 함수 종료
-    }
-
-    // 종료일의 시간을 하루의 끝으로 설정 (해당 날짜 전체 범위 포함)
-    DateTime adjustedEndDate = DateTime(
-      end.year,
-      end.month,
-      end.day,
-      23,
-      59,
-      59,
-    );
-
-    try {
-      // DatabaseHandler를 통해 데이터 가져오기 (Map 형태로 반환됨)
-      // getReceivedInventoryByDateRangeAndUser 메서드는 userId를 받으므로 그대로 사용 (storeCode는 이 쿼리에서 사용되지 않음)
-      // TODO: 만약 재고 정보를 가져올 때 대리점 코드로 필터링이 필요하다면
-      // DatabaseHandler에 getReceivedInventoryByDateRangeAndUserAndStore 메서드를 추가하고 여기서 호출해야 함.
-      final fetchedInventory = await DatabaseHandler()
-          .getReceivedInventoryByDateRangeAndUser(
-            start,
-            adjustedEndDate,
-            userId,
-          ); // userId 사용
-      int calculatedTotal = 0;
-
-      // 가져온 목록을 순회하며 총 수량 계산
-      for (var item in fetchedInventory) {
-        // 'receivedQuantity' 필드가 Map에 있고 null이 아니며 정수형으로 변환 가능하면 더함
-        // SQL에서 SUM은 기본적으로 INTEGER 또는 REAL을 반환하므로 int로 캐스팅합니다.
-        if (item.containsKey('receivedQuantity') &&
-            item['receivedQuantity'] != null) {
-          calculatedTotal +=
-              (item['receivedQuantity'] as int); // Map에서 가져온 수량 더하기
-        }
-      }
-
-      setState(() {
-        receivedInventoryList = fetchedInventory; // 가져온 Map 리스트로 상태 업데이트
-        totalReceivedQuantity = calculatedTotal; // 총 입고 수량 업데이트
-      });
-    } catch (e) {
-      // 에러 처리 로직 추가 (예: 에러 메시지 표시)
-      print('재고 입고 정보를 가져오는 중 오류 발생: ${e.toString()}');
-      setState(() {
-        receivedInventoryList = []; // 오류 발생 시 목록 초기화
-        totalReceivedQuantity = 0; // 총 입고 수량도 초기화
-      });
-      // TODO: 사용자에게 오류 발생 알림 (예: SnackBar) 또는 Dialog
-      Get.snackbar(
-        '오류',
-        '재고 입고 정보를 가져오는데 실패했습니다: ${e.toString()}',
+        '매장 재고 현황 로딩 중 오류 발생: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -191,162 +172,101 @@ class _StoreCheckInventoryState extends State<StoreCheckInventory> {
   }
 
   @override
-  Widget build(context) {
-    // GetX 사용을 위해 context 대신 build(context) 사용
-    // storeCode 로딩 중이거나 로딩 실패 시 로딩 인디케이터 또는 오류 메시지 표시
-    if (_isLoadingStoreCode) {
-      return Scaffold(
-        appBar: AppBar(title: Text('매장 재고 정보 로딩 중...')),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    } else if (_loggedInStoreCode == null) {
-      // storeCode 로딩 실패
-      return Scaffold(
-        appBar: AppBar(title: Text('매장 재고 확인 오류')),
-        body: Center(
-          child: Text(
-            '대리점 정보를 가져오는데 실패했습니다.',
-            style: TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-    }
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('매장 재고 확인')), // 제목 (필요하다면 대리점 이름 추가)
+      appBar: AppBar(
+        title: const Text("매장 재고 확인"),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 자식들을 가로로 늘이기
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 날짜 선택 버튼 (시작일, 종료일)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
-                  // 버튼이 가로 공간을 차지하도록 Expanded 사용
-                  child: CustomButtonCalender(
-                    // CustomButtonCalender 사용
-                    label:
-                        startDate == null
-                            ? '시작일 선택'
-                            : '${startDate!.toLocal()}'.split(
-                              ' ',
-                            )[0], // 선택된 날짜 표시
-                    onDateSelected: (DateTime date) {
-                      // CustomButtonCalender에서 날짜 선택 시 호출
-                      setState(() {
-                        startDate = date; // 시작 날짜 상태 업데이트
-                        // 시작일 선택 후 종료일이 시작일 이전이라면 종료일도 시작일로 업데이트 (선택 사항)
-                        if (endDate != null && endDate!.isBefore(startDate!)) {
-                          endDate = startDate;
-                        }
-                      });
-                      // 시작일과 종료일 모두 선택되었으면 데이터 가져오기
-                      if (startDate != null &&
-                          endDate != null &&
-                          _loggedInUserId != null &&
-                          _loggedInStoreCode != null) {
-                        // storeCode 유효성 체크 추가
-                        fetchReceivedInventory(
-                          startDate!,
-                          endDate!,
-                          _loggedInUserId!,
-                          _loggedInStoreCode!,
-                        ); // storeCode 사용
-                      } else if (_loggedInStoreCode == null) {
-                        Get.snackbar(
-                          '오류',
-                          '대리점 정보가 로딩되지 않았습니다.',
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
-                      }
-                    },
+                  child: ElevatedButton(
+                    onPressed: () => _selectDate(context, isStartDate: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 15,
+                      ),
+                      textStyle: TextStyle(fontSize: 16),
+                    ),
+                    child: Text(
+                      _startDate == null
+                          ? '시작일 선택'
+                          : DateFormat('yyyy-MM-dd').format(_startDate!),
+                    ),
                   ),
                 ),
-                SizedBox(width: 10), // 버튼 사이 간격
+                SizedBox(width: 10),
                 Expanded(
-                  // 버튼이 가로 공간을 차지하도록 Expanded 사용
-                  child: CustomButtonCalender(
-                    // CustomButtonCalender 사용
-                    label:
-                        endDate == null
-                            ? '종료일 선택'
-                            : '${endDate!.toLocal()}'.split(
-                              ' ',
-                            )[0], // 선택된 날짜 표시
-                    onDateSelected: (DateTime date) {
-                      // CustomButtonCalender에서 날짜 선택 시 호출
-                      // 선택된 종료일이 시작일보다 이전이면 경고 또는 조정 (필수)
-                      if (startDate != null && date.isBefore(startDate!)) {
-                        // 사용자에게 알림 또는 종료일을 시작일과 같게 설정
-                        print('종료일이 시작일보다 이전입니다. 종료일을 시작일과 같게 설정합니다.');
-                        date = startDate!; // 종료일을 시작일로 강제 조정
-                      }
-
-                      setState(() {
-                        endDate = date; // 종료 날짜 상태 업데이트
-                      });
-                      // 시작일과 종료일 모두 선택되었으면 데이터 가져오기
-                      if (startDate != null &&
-                          endDate != null &&
-                          _loggedInUserId != null &&
-                          _loggedInStoreCode != null) {
-                        // storeCode 유효성 체크 추가
-                        fetchReceivedInventory(
-                          startDate!,
-                          endDate!,
-                          _loggedInUserId!,
-                          _loggedInStoreCode!,
-                        ); // storeCode 사용
-                      } else if (_loggedInStoreCode == null) {
-                        Get.snackbar(
-                          '오류',
-                          '대리점 정보가 로딩되지 않았습니다.',
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
-                      }
-                    },
+                  child: ElevatedButton(
+                    onPressed: () => _selectDate(context, isStartDate: false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 15,
+                      ),
+                      textStyle: TextStyle(fontSize: 16),
+                    ),
+                    child: Text(
+                      _endDate == null
+                          ? '종료일 선택'
+                          : DateFormat('yyyy-MM-dd').format(_endDate!),
+                    ),
                   ),
                 ),
               ],
             ),
             SizedBox(height: 16),
-            // 재고 입고 목록 표시 영역
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                '총 입고 수량: ${_totalQuantity}개',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            SizedBox(height: 8),
             Expanded(
-              // Column 내에서 남은 공간을 차지하도록 Expanded 사용
               child: Container(
-                padding: EdgeInsets.all(8.0), // Container 내부 패딩 조정
+                padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // 헤더와 목록 정렬
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 데이터 목록의 헤더 (컬럼 이름)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 4.0,
                         horizontal: 8.0,
-                      ), // 헤더 패딩 조정
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             flex: 3,
                             child: Text(
-                              '제품명',
+                              '제품 이름',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
-                            flex: 1,
+                            flex: 2,
                             child: Text(
                               '색상',
                               style: TextStyle(
@@ -354,7 +274,7 @@ class _StoreCheckInventoryState extends State<StoreCheckInventory> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
                             flex: 1,
                             child: Text(
@@ -364,9 +284,9 @@ class _StoreCheckInventoryState extends State<StoreCheckInventory> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                           Expanded(
-                            flex: 1,
+                            flex: 2,
                             child: Text(
                               '수량',
                               style: TextStyle(
@@ -374,132 +294,77 @@ class _StoreCheckInventoryState extends State<StoreCheckInventory> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ), // 글씨 크기 조정
+                          ),
                         ],
                       ),
                     ),
-                    Divider(height: 1, thickness: 1), // 헤더와 목록 구분선, 높이 조정
-                    // 재고 목록 표시
-                    Expanded(
-                      // Column 내에서 ListView가 남은 공간을 차지하도록 Expanded 사용
-                      child:
-                          receivedInventoryList.isEmpty &&
-                                  startDate != null &&
-                                  endDate !=
-                                      null // 날짜 선택 후 데이터가 없을 때 메시지 표시
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Text(
-                                    '선택하신 기간 (${startDate!.toLocal().toString().split(' ')[0]} - ${endDate!.toLocal().toString().split(' ')[0]}) 내 입고된 제품이 없습니다.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                    Divider(height: 1, thickness: 1, color: Colors.grey),
+                    _isLoading
+                        ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                        : inventoryList.isEmpty &&
+                            _startDate != null &&
+                            _endDate != null
+                        ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: Text('해당 기간에 입고된 제품이 없습니다.')),
+                        )
+                        : Expanded(
+                          child: ListView.builder(
+                            itemCount: inventoryList.length,
+                            itemBuilder: (context, index) {
+                              final inventoryItem = inventoryList[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0,
+                                  horizontal: 8.0,
                                 ),
-                              )
-                              : startDate == null ||
-                                  endDate ==
-                                      null // 날짜를 선택하지 않았을 때 초기 메시지
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Text(
-                                    '시작일과 종료일을 선택하여 입고된 재고를 확인하세요.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        inventoryItem['productsName'] ?? '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ),
-                                  ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        inventoryItem['productsColor'] ?? '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 1,
+                                      child: Text(
+                                        inventoryItem['productsSize']
+                                                ?.toString() ??
+                                            '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        inventoryItem['receivedQuantity']
+                                                ?.toString() ??
+                                            '',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                              : ListView.builder(
-                                // 데이터가 있을 때 목록 표시
-                                itemCount: receivedInventoryList.length,
-                                itemBuilder: (context, index) {
-                                  final item =
-                                      receivedInventoryList[index]; // Map 형태의 데이터 항목
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                      horizontal: 8.0,
-                                    ), // 목록 항목 패딩 조정
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        // Map 키 이름은 DatabaseHandler 쿼리의 SELECT 절 이름과 일치해야 합니다.
-                                        Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            item['productsName'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // productsName 케이스 반영
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            item['productsColor'] ?? '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // productsColor 케이스 반영
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            item['productsSize']?.toString() ??
-                                                '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // productsSize 케이스 반영
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            item['receivedQuantity']
-                                                    ?.toString() ??
-                                                '',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ), // 수량 (핸들러에서 정의한 별칭)
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                    ),
+                              );
+                            },
+                          ),
+                        ),
                   ],
                 ),
-              ),
-            ),
-            SizedBox(height: 16),
-            // 총 입고 수량 표시
-            Container(
-              padding: EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.blueAccent,
-                ), // 강조를 위한 다른 테두리 색상
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.blueAccent.withOpacity(0.1), // 약간의 배경색 추가
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '총 입고 수량:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '$totalReceivedQuantity',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent,
-                    ),
-                  ), // 총 수량 표시
-                ],
               ),
             ),
           ],
