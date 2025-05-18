@@ -92,9 +92,9 @@ class _LoginState extends State<Login> {
   loginCheck(String id, String pw) async {
     await getJSONData(id, pw);
     count = data[0]['count'];
-    memberType = int.parse(data[0]['memberType']);
     if (count == 1) {
       // id,pw 일치하는 값이 있을 때
+      memberType = int.parse(data[0]['memberType']);
       CustomSnackbar().showSnackbar(
         title: '로그인 성공',
         message: '환영합니다.',

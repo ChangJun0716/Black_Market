@@ -36,15 +36,6 @@ CREATE TABLE `affiliation` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `affiliation`
---
-
-LOCK TABLES `affiliation` WRITE;
-/*!40000 ALTER TABLE `affiliation` DISABLE KEYS */;
-/*!40000 ALTER TABLE `affiliation` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `approvalStep`
 --
 
@@ -69,15 +60,6 @@ CREATE TABLE `approvalStep` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `approvalStep`
---
-
-LOCK TABLES `approvalStep` WRITE;
-/*!40000 ALTER TABLE `approvalStep` DISABLE KEYS */;
-/*!40000 ALTER TABLE `approvalStep` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `createApprovalDocument`
 --
 
@@ -100,15 +82,6 @@ CREATE TABLE `createApprovalDocument` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `createApprovalDocument`
---
-
-LOCK TABLES `createApprovalDocument` WRITE;
-/*!40000 ALTER TABLE `createApprovalDocument` DISABLE KEYS */;
-/*!40000 ALTER TABLE `createApprovalDocument` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `createNotice`
 --
 
@@ -116,7 +89,7 @@ DROP TABLE IF EXISTS `createNotice`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `createNotice` (
-  `title` int DEFAULT NULL,
+  `title` varchar(45) DEFAULT NULL,
   `content` varchar(45) DEFAULT NULL,
   `date` varchar(45) DEFAULT NULL,
   `photo` blob,
@@ -125,15 +98,6 @@ CREATE TABLE `createNotice` (
   CONSTRAINT `fk_createNotice_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `createNotice`
---
-
-LOCK TABLES `createNotice` WRITE;
-/*!40000 ALTER TABLE `createNotice` DISABLE KEYS */;
-/*!40000 ALTER TABLE `createNotice` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `daffiliation`
@@ -154,15 +118,6 @@ CREATE TABLE `daffiliation` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `daffiliation`
---
-
-LOCK TABLES `daffiliation` WRITE;
-/*!40000 ALTER TABLE `daffiliation` DISABLE KEYS */;
-/*!40000 ALTER TABLE `daffiliation` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `dispatch`
 --
 
@@ -175,23 +130,13 @@ CREATE TABLE `dispatch` (
   `users_userid` varchar(45) NOT NULL,
   `Purchase_purchaseId` int NOT NULL,
   `Purchase_users_userid` varchar(45) NOT NULL,
-  `Purchase_products_productsCode` int NOT NULL,
   `Purchase_store_storeCode` int NOT NULL,
-  PRIMARY KEY (`users_userid`,`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_products_productsCode`,`Purchase_store_storeCode`),
-  KEY `fk_dispatch_Purchase1_idx` (`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_products_productsCode`,`Purchase_store_storeCode`),
-  CONSTRAINT `fk_dispatch_Purchase1` FOREIGN KEY (`Purchase_purchaseId`, `Purchase_users_userid`, `Purchase_products_productsCode`, `Purchase_store_storeCode`) REFERENCES `Purchase` (`purchaseId`, `users_userid`, `products_productsCode`, `store_storeCode`),
+  `Purchase_products_productsCode` int NOT NULL,
+  PRIMARY KEY (`users_userid`,`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_store_storeCode`,`Purchase_products_productsCode`),
+  KEY `fk_dispatch_Purchase1_idx` (`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_store_storeCode`),
   CONSTRAINT `fk_dispatch_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `dispatch`
---
-
-LOCK TABLES `dispatch` WRITE;
-/*!40000 ALTER TABLE `dispatch` DISABLE KEYS */;
-/*!40000 ALTER TABLE `dispatch` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `grade`
@@ -208,15 +153,6 @@ CREATE TABLE `grade` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `grade`
---
-
-LOCK TABLES `grade` WRITE;
-/*!40000 ALTER TABLE `grade` DISABLE KEYS */;
-/*!40000 ALTER TABLE `grade` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `manufacturers`
 --
 
@@ -224,19 +160,10 @@ DROP TABLE IF EXISTS `manufacturers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `manufacturers` (
-  `manufacturerName` int NOT NULL,
+  `manufacturerName` varchar(45) NOT NULL,
   PRIMARY KEY (`manufacturerName`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `manufacturers`
---
-
-LOCK TABLES `manufacturers` WRITE;
-/*!40000 ALTER TABLE `manufacturers` DISABLE KEYS */;
-/*!40000 ALTER TABLE `manufacturers` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `oders`
@@ -250,27 +177,15 @@ CREATE TABLE `oders` (
   `orderStatus` varchar(45) DEFAULT NULL,
   `orderQuantity` varchar(45) DEFAULT NULL,
   `orderDate` varchar(45) DEFAULT NULL,
-  `manufacturers_manufacturerName` int NOT NULL,
-  `products_productsCode` int NOT NULL,
+  `manufacturers_manufacturerName` varchar(45) NOT NULL,
   `users_userid` varchar(45) NOT NULL,
-  PRIMARY KEY (`orderId`,`manufacturers_manufacturerName`,`products_productsCode`,`users_userid`),
+  `products_productsCode` int NOT NULL,
+  PRIMARY KEY (`orderId`,`manufacturers_manufacturerName`,`users_userid`,`products_productsCode`),
   KEY `fk_oders_manufacturers1_idx` (`manufacturers_manufacturerName`),
-  KEY `fk_oders_products1_idx` (`products_productsCode`),
   KEY `fk_oders_users1_idx` (`users_userid`),
-  CONSTRAINT `fk_oders_manufacturers1` FOREIGN KEY (`manufacturers_manufacturerName`) REFERENCES `manufacturers` (`manufacturerName`),
-  CONSTRAINT `fk_oders_products1` FOREIGN KEY (`products_productsCode`) REFERENCES `products` (`productsCode`),
   CONSTRAINT `fk_oders_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `oders`
---
-
-LOCK TABLES `oders` WRITE;
-/*!40000 ALTER TABLE `oders` DISABLE KEYS */;
-/*!40000 ALTER TABLE `oders` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `productRegistration`
@@ -280,25 +195,15 @@ DROP TABLE IF EXISTS `productRegistration`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `productRegistration` (
-  `ptitle` text DEFAULT NULL,
-  `contentBlocks` longblob, 
+  `ptitle` text,
+  `contentBlocks` longblob,
   `introductionPhoto` blob,
-  `products_productsCode` int NOT NULL,
   `users_userid` varchar(45) NOT NULL,
-  PRIMARY KEY (`products_productsCode`,`users_userid`),
-  CONSTRAINT `fk_productRegistration_products` FOREIGN KEY (`products_productsCode`) REFERENCES `products` (`productsCode`),
+  `products_productsCode` int NOT NULL,
+  PRIMARY KEY (`users_userid`,`products_productsCode`),
   CONSTRAINT `fk_productRegistration_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `productRegistration`
---
-
-LOCK TABLES `productRegistration` WRITE;
-/*!40000 ALTER TABLE `productRegistration` DISABLE KEYS */;
-/*!40000 ALTER TABLE `productRegistration` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `products`
@@ -308,7 +213,7 @@ DROP TABLE IF EXISTS `products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `products` (
-  `productsCode` int NOT NULL,
+  `productsCode` int NOT NULL AUTO_INCREMENT,
   `productsName` varchar(45) DEFAULT NULL,
   `productsImage` blob,
   `productsColor` varchar(45) DEFAULT NULL,
@@ -318,15 +223,6 @@ CREATE TABLE `products` (
   PRIMARY KEY (`productsCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `products`
---
-
-LOCK TABLES `products` WRITE;
-/*!40000 ALTER TABLE `products` DISABLE KEYS */;
-/*!40000 ALTER TABLE `products` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `Purchase`
@@ -349,20 +245,10 @@ CREATE TABLE `Purchase` (
   KEY `fk_Purchase_users1_idx` (`users_userid`),
   KEY `fk_Purchase_products1_idx` (`products_productsCode`),
   KEY `fk_Purchase_store1_idx` (`store_storeCode`),
-  CONSTRAINT `fk_Purchase_products1` FOREIGN KEY (`products_productsCode`) REFERENCES `products` (`productsCode`),
   CONSTRAINT `fk_Purchase_store1` FOREIGN KEY (`store_storeCode`) REFERENCES `store` (`storeCode`),
   CONSTRAINT `fk_Purchase_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Purchase`
---
-
-LOCK TABLES `Purchase` WRITE;
-/*!40000 ALTER TABLE `Purchase` DISABLE KEYS */;
-/*!40000 ALTER TABLE `Purchase` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `return`
@@ -381,23 +267,13 @@ CREATE TABLE `return` (
   `users_userid` varchar(45) NOT NULL,
   `Purchase_purchaseId` int NOT NULL,
   `Purchase_users_userid` varchar(45) NOT NULL,
-  `Purchase_products_productsCode` int NOT NULL,
   `Purchase_store_storeCode` int NOT NULL,
-  PRIMARY KEY (`users_userid`,`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_products_productsCode`,`Purchase_store_storeCode`),
-  KEY `fk_return_Purchase1_idx` (`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_products_productsCode`,`Purchase_store_storeCode`),
-  CONSTRAINT `fk_return_Purchase1` FOREIGN KEY (`Purchase_purchaseId`, `Purchase_users_userid`, `Purchase_products_productsCode`, `Purchase_store_storeCode`) REFERENCES `Purchase` (`purchaseId`, `users_userid`, `products_productsCode`, `store_storeCode`),
+  `Purchase_products_productsCode` int NOT NULL,
+  PRIMARY KEY (`users_userid`,`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_store_storeCode`,`Purchase_products_productsCode`),
+  KEY `fk_return_Purchase1_idx` (`Purchase_purchaseId`,`Purchase_users_userid`,`Purchase_store_storeCode`),
   CONSTRAINT `fk_return_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `return`
---
-
-LOCK TABLES `return` WRITE;
-/*!40000 ALTER TABLE `return` DISABLE KEYS */;
-/*!40000 ALTER TABLE `return` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `stockReceipts`
@@ -409,27 +285,15 @@ DROP TABLE IF EXISTS `stockReceipts`;
 CREATE TABLE `stockReceipts` (
   `stockReceiptsQuantityReceived` int NOT NULL,
   `stockReceiptsReceipDate` varchar(45) DEFAULT NULL,
-  `manufacturers_manufacturerName` int NOT NULL,
-  `products_productsCode` int NOT NULL,
+  `manufacturers_manufacturerName` varchar(45) NOT NULL,
   `users_userid` varchar(45) NOT NULL,
-  PRIMARY KEY (`stockReceiptsQuantityReceived`,`manufacturers_manufacturerName`,`products_productsCode`,`users_userid`),
+  `products_productsCode` int NOT NULL,
+  PRIMARY KEY (`stockReceiptsQuantityReceived`,`manufacturers_manufacturerName`,`users_userid`,`products_productsCode`),
   KEY `fk_stockReceipts_manufacturers1_idx` (`manufacturers_manufacturerName`),
-  KEY `fk_stockReceipts_products1_idx` (`products_productsCode`),
   KEY `fk_stockReceipts_users1_idx` (`users_userid`),
-  CONSTRAINT `fk_stockReceipts_manufacturers1` FOREIGN KEY (`manufacturers_manufacturerName`) REFERENCES `manufacturers` (`manufacturerName`),
-  CONSTRAINT `fk_stockReceipts_products1` FOREIGN KEY (`products_productsCode`) REFERENCES `products` (`productsCode`),
   CONSTRAINT `fk_stockReceipts_users1` FOREIGN KEY (`users_userid`) REFERENCES `users` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `stockReceipts`
---
-
-LOCK TABLES `stockReceipts` WRITE;
-/*!40000 ALTER TABLE `stockReceipts` DISABLE KEYS */;
-/*!40000 ALTER TABLE `stockReceipts` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `store`
@@ -449,15 +313,6 @@ CREATE TABLE `store` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `store`
---
-
-LOCK TABLES `store` WRITE;
-/*!40000 ALTER TABLE `store` DISABLE KEYS */;
-/*!40000 ALTER TABLE `store` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `users`
 --
 
@@ -475,15 +330,6 @@ CREATE TABLE `users` (
   PRIMARY KEY (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `users`
---
-
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -494,4 +340,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-16 19:00:15
+-- Dump completed on 2025-05-18 11:07:05
