@@ -197,7 +197,7 @@ DROP TABLE IF EXISTS `productRegistration`;
 CREATE TABLE `productRegistration` (
   `ptitle` text,
   `contentBlocks` longblob,
-  `introductionPhoto` blob,
+  `introductionPhoto` longblob,
   `users_userid` varchar(45) NOT NULL,
   `products_productsCode` int NOT NULL,
   PRIMARY KEY (`users_userid`,`products_productsCode`),
@@ -215,7 +215,7 @@ DROP TABLE IF EXISTS `products`;
 CREATE TABLE `products` (
   `productsCode` int NOT NULL AUTO_INCREMENT,
   `productsName` varchar(45) DEFAULT NULL,
-  `productsImage` blob,
+  `productsImage` longblob,
   `productsColor` varchar(45) DEFAULT NULL,
   `productsSize` int DEFAULT NULL,
   `productsOPrice` int DEFAULT NULL,

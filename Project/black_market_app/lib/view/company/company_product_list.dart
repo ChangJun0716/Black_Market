@@ -4,6 +4,7 @@
 //개발일지
 //2025_05_18
 //디비 라이트로 구현 헀던 핸드러를 빼고 mysql 파이썬 서버로 바꾸기 
+//파이썬으로 받으면서 sql문을 try로 감쌌다 아님 화면 들어가다가 튕김 
 
 import 'dart:convert';
 
@@ -22,7 +23,7 @@ class CompanyProductList extends StatefulWidget {
 }
 
 class _CompanyProductListState extends State<CompanyProductList> {
-  
+   bool _isLoading = true;
   //검색한 결과를 받아 오는 리스트
   List data = [];
   List<Products> filteredList = [];
@@ -36,12 +37,20 @@ class _CompanyProductListState extends State<CompanyProductList> {
   }
   //전부 보이는 데이타 
   getJSONData()async{
-  var response = await http.get(Uri.parse("http://$globalip:8000/kimsua/select/products"));
-  data.clear();
-  data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
-  setState(() {});
-  // print(data);
-}
+    print("실행됨");
+    try {
+      var response = await http.get(Uri.parse("http://$globalip:8000/kimsua/select/products"));
+      data.clear();
+      data.addAll(json.decode(utf8.decode(response.bodyBytes))['result']);
+      _isLoading = false;
+      setState(() {});
+          // print(data);
+        }catch (e) {
+      setState(() => _isLoading = false);
+    }
+        
+  }
+  
   getJSONData1()async{
     final keyword = searchController.text.trim();
       if (keyword.isEmpty) {
@@ -102,7 +111,9 @@ class _CompanyProductListState extends State<CompanyProductList> {
           ),
         ],
       ),
-      body: Column(
+      body:_isLoading
+      ? const Center(child: CircularProgressIndicator())
+      :Column(
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 4),
@@ -160,7 +171,8 @@ class _CompanyProductListState extends State<CompanyProductList> {
               style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
               onPressed: () async {
               await Get.to(() => const CompanyCreateProduct());
-              getJSONData1(); // 제품 등록 후 재로딩
+              searchController.text = "";
+              getJSONData(); // 제품 등록 후 재로딩
                  },
 
               child: const Text('제품 등록'),

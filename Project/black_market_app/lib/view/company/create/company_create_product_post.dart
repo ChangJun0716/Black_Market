@@ -15,7 +15,6 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:black_market_app/model/products.dart';
 
 class CompanyCreatePost extends StatefulWidget {
   const CompanyCreatePost({super.key});
@@ -25,17 +24,17 @@ class CompanyCreatePost extends StatefulWidget {
 }
 
 class _CompanyCreatePostState extends State<CompanyCreatePost> {
-  //제목을 받을 컨트롤러 
+  //제품 제목 
   final _titleController = TextEditingController();
-  Uint8List? _thumbnail;
-  //소개 사진 여러개를 받을 리스트 
+  //사진 
+  XFile? imageFile;
+  final ImagePicker picker = ImagePicker();
+  //사진 여러개 
   List<XFile> _additionalImages = [];
   final _formKey = GlobalKey<FormState>();
-  //물건 리스트가 들어갈 리스트 
-  List<Products> _products = [];
-  //물건이 등록이 안돈 샅애 일 수도 있어 ?
-  Products? _selectedProduct;
-  //로딩 체크
+  //등록된 제품 받아오는 리스트
+  List<dynamic> data = [];
+  Map<String, dynamic>? _selectedProduct;
   bool _isLoading = true;
 
   @override
@@ -44,70 +43,67 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
     _loadProducts();
   }
 
-  Future<void> _loadProducts() async {
+  // 제품 이름으로 그룹바이해서 대표 코드 들고옴 
+  _loadProducts() async {
     try {
-      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/products/post'));
+      final response = await http.get(Uri.parse('http://$globalip:8000/kimsua/select/products/post'));
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = json.decode(response.body);
-        setState(() {
-          _products = jsonList.map((e) => Products.fromMap(e)).toList();
-          _isLoading = false;
-        });
+        data.clear();
+        data.addAll(json.decode(utf8.decode(response.bodyBytes))['result']);
+        _isLoading = false;
+        setState(() {});
       } else {
         setState(() => _isLoading = false);
       }
     } catch (e) {
+      print("Error loading products: $e");
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _pickThumbnail() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _thumbnail = bytes;
-      });
-    }
+  //대표 사진 선택 
+  getImageFromGallery(ImageSource imageSource)async{
+    final XFile? pickedFile = await picker.pickImage(source: imageSource);
+    imageFile = XFile(pickedFile!.path); 
+    setState(() {});
   }
 
-  Future<void> _pickMultipleImages() async {
+  //여러장 선택
+  // 더 여러장 등록 할 수 있는데 같은 조 팀장님인 창준님이 3장까지만 하죠? 하셔서 억울하게 5장 됨
+  _pickMultipleImages() async {
     final picker = ImagePicker();
     final images = await picker.pickMultiImage();
-    // 이미지 선택 라인 4개 까지 제한을 주긴 해야됨 아님 버퍼 오버 풀러우 생길 꺼임 ㅇㅇ 
-    if (images != null && images.length + _additionalImages.length <= 4) {
+    if (images != null && images.length + _additionalImages.length <= 5) {
       setState(() {
         _additionalImages.addAll(images);
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        // ㅋㅋ 너무 많이 받으면 같은조안 창준님이 싫어 하셔서 제한을 둠 
-        SnackBar(content: Text('최대 4장까지만 선택할 수 있습니다.')),
+        SnackBar(content: Text('최대 5장까지만 선택할 수 있습니다.')),
       );
     }
   }
 
-  Future<void> _uploadPostToServer() async {
-    //아이디를 받아옴 
-    //get srorage 안에 넣어 놓고 로컬 사용 
+  //게시글 업로드
+  _uploadPostToServer() async {
     final box = GetStorage();
     final userId = box.read('uid');
 
-    if (_formKey.currentState!.validate() && _thumbnail != null && _additionalImages.isNotEmpty && _selectedProduct != null) {
-      final uri = Uri.parse('http://${globalip}:8000/kimsua/select/product/post');
+    if (_formKey.currentState!.validate() && imageFile != null && _additionalImages.isNotEmpty && _selectedProduct != null) {
+      final uri = Uri.parse('http://${globalip}:8000/kimsua/insert/products/post');
       final request = http.MultipartRequest('POST', uri);
 
       request.fields['ptitle'] = _titleController.text;
-      request.fields['products_productsCode'] = _selectedProduct!.productsCode.toString();
+      request.fields['products_productsCode'] = _selectedProduct!['productsCode'].toString();
       request.fields['users_userid'] = userId.toString();
-      request.files.add(http.MultipartFile.fromBytes('introductionPhoto', _thumbnail!, filename: 'thumbnail.jpg'));
+      request.files.add(await http.MultipartFile.fromPath('introductionPhoto', imageFile!.path));
 
+      // 리스트 사진을 받은 갯수 만큼 5장으로 제한 줘서 그냥 5장도 가능함 
       for (var i = 0; i < _additionalImages.length; i++) {
         final bytes = await _additionalImages[i].readAsBytes();
         request.files.add(http.MultipartFile.fromBytes('contentBlocks', bytes, filename: 'block_$i.jpg'));
       }
-    // 상황에 완료 코드를 보고 업로드에 해당하는 스낵바 생성
+
       try {
         final response = await request.send();
         if (response.statusCode == 200) {
@@ -139,19 +135,22 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    DropdownButtonFormField<Products>(
+                    // 제품 드롭다운
+                    DropdownButtonFormField<Map<String, dynamic>>(
                       value: _selectedProduct,
                       hint: const Text('제품 선택'),
-                      items: _products.map((product) {
+                      items: data.map<DropdownMenuItem<Map<String, dynamic>>>((item) {
                         return DropdownMenuItem(
-                          value: product,
-                          child: Text('${product.productsName} (${product.productsCode})'),
+                          value: item,
+                          child: Text('${item['productsName']} (${item['productsCode']})',
+                          style: TextStyle(color: Colors.pink)),
                         );
                       }).toList(),
                       onChanged: (value) => setState(() => _selectedProduct = value),
                       validator: (value) => value == null ? '제품을 선택해주세요' : null,
                     ),
                     const SizedBox(height: 16),
+                    // 제목 입력란
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
@@ -162,20 +161,22 @@ class _CompanyCreatePostState extends State<CompanyCreatePost> {
                       validator: (value) => value == null || value.isEmpty ? '제목을 입력해주세요' : null,
                     ),
                     const SizedBox(height: 16),
+                    // 이미지 선택 버튼
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: _pickThumbnail,
+                          onPressed: () => getImageFromGallery(ImageSource.gallery),
                           child: const Text('대표 이미지 선택'),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: _pickMultipleImages,
-                          child: const Text('소개 이미지 선택 (최대 4장)'),
+                          child: const Text('소개 이미지 선택 (최대 5장)'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
+                    // 이미지 미리보기
                     if (_additionalImages.isNotEmpty)
                       Wrap(
                         spacing: 8,
