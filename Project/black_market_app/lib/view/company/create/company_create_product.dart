@@ -42,11 +42,11 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
           "POST",
           Uri.parse("http://$globalip:8000/kimsua/insert/products"),
         );
-        request.fields['productsName'] = _nameController.text;
-        request.fields['productsColor'] = _colorController.text;
-        request.fields['productsSize'] = _sizeController.text;
-        request.fields['productsOPrice'] = _opriceController.text;
-        request.fields['productsPrice'] = _priceController.text;
+        request.fields['productsName'] = _nameController.text.trim();
+        request.fields['productsColor'] = _colorController.text.trim();
+        request.fields['productsSize'] = _sizeController.text.trim();
+        request.fields['productsOPrice'] = _opriceController.text.trim();
+        request.fields['productsPrice'] = _priceController.text.trim();
         request.files.add(await http.MultipartFile.fromPath('productsImage', imageFile!.path));
 
         var res = await request.send();

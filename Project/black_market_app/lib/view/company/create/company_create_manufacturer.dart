@@ -1,7 +1,16 @@
-//재조사 입력 페이지
+//재조사 입력 페이지 - 2조 팀원 김수아 개발 
+//목적 : 
+//제조사를 입력하는 페이지 새로운 제조사의 물건을 들어오데 되면 제조사를 등록 할 수 있다.
+//차후 더 이상 팔지 않는 제조사의 이름은 지울 수 도 있게 하려고 한다 
+//개발 일지 : 
+//2025_05_18
+// 원래 있던 디비 라이트의 내용을 mysql로 바꿨다.
+
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/model/manufacturers.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class CompanyCreateManufacturer extends StatefulWidget {
   const CompanyCreateManufacturer({super.key});
@@ -12,32 +21,50 @@ class CompanyCreateManufacturer extends StatefulWidget {
 
 class _CompanyCreateManufacturerState extends State<CompanyCreateManufacturer> {
   final TextEditingController _nameController = TextEditingController();
-  late DatabaseHandler handler;
+
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
+
   }
 
-  void _submit() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+  submit() async {
+    if (_nameController.text.trim().isNotEmpty) {
+      
+      try {
+        var request = http.MultipartRequest(
+          "POST",
+          Uri.parse("http://$globalip:8000/kimsua/insert/manufacturers"),
+        );
+        request.fields['manufacturerName'] = _nameController.text.trim();
+         var response =await request.send();
+        
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('제조사가 등록되었습니다.')),
+        );
+        Navigator.pop(context);
+      
+      } catch (e) {
+        errorSnackBar();
+      }
+       
+
+
+
+    } else{
+       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('제조사명을 입력해주세요.')),
       );
-      return;
     }
-
-    final manufacturer = Manufacturers(manufacturerName: name);
-    await handler.insertManufacturer(manufacturer);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('제조사가 등록되었습니다.')),
+    }
+  errorSnackBar() {
+    Get.snackbar(
+      'Error',
+      '입력시 문제가 발생했습니다.',
+      duration: Duration(seconds: 2),
     );
-    Navigator.pop(context);
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +89,7 @@ class _CompanyCreateManufacturerState extends State<CompanyCreateManufacturer> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: submit,
                 child: const Text('등록하기'),
               ),
             ),

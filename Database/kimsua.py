@@ -32,7 +32,7 @@ def connect():
     )
 # post 관련  : ----------------------
 # 등록 
-@router.post("/insert/product/post")
+@router.post("/insert/products/post")
 async def insert_post( ptitle: str =Form(...),introductionPhoto : UploadFile = Form(...),products_productsCode : int = Form(...),users_userid : str = Form(...),contentBlocks:List[UploadFile] = File(...)):
     try:
         image_data = await introductionPhoto.read()
@@ -52,7 +52,7 @@ async def insert_post( ptitle: str =Form(...),introductionPhoto : UploadFile = F
         return{"resule":"Error"}
 
 #검색 [물건 게시글 리스트]
-@router.get("/kimsua/select/products/post/list")
+@router.get("/select/products/post/list")
 async def select_product_posts():
     try:
         conn = connect()
@@ -80,19 +80,23 @@ async def get_products():
         conn = connect()
         curs = conn.cursor()
         sql = """
-        SELECT * FROM products p
-        WHERE p.productsCode = (
-            SELECT MIN(productsCode)
-            FROM products
-            WHERE productsName = p.productsName
-        )
-        GROUP BY p.productsName
-        ORDER BY p.productsName
+        SELECT 
+        MIN(productsCode) AS productsCode,
+        productsName,
+        MAX(productsColor) AS productsColor,
+        MAX(productsSize) AS productsSize,
+        MAX(productsOPrice) AS productsOPrice,
+        MAX(productsPrice) AS productsPrice
+        FROM products
+        GROUP BY productsName;
+
         """
         curs.execute(sql)
         rows = curs.fetchall()
         conn.close()
-        return rows
+        result = [{'productsCode' :row[0],'productsName' : row[1],'productsColor' : row[2],'productsSize' :row[3],'productsOPrice':row[4],'productsPrice':row[5]}for row in rows]
+
+        return {"result" :result }
     except Exception as e:
         return {"result": "Error", "detail": str(e)}
     
@@ -141,9 +145,9 @@ async def select_all_products(productsName : str):
     try:
         conn = connect()
         curs = conn.cursor()
-        sql = "SELECT productsCode, productsName, productsColor, productsSize, productsOPrice, productsPrice FROM products WHERE productsName LIKE = %s OR productsCode LIKE = %s"
+        sql = "SELECT productsCode, productsName, productsColor, productsSize, productsOPrice, productsPrice FROM products WHERE productsName LIKE %s OR productsCode LIKE %s"
         like_pattern = f"%{productsName}%"
-        curs.execute(sql, (like_pattern,),(like_pattern,))
+        curs.execute(sql, (like_pattern, like_pattern))
         rows = curs.fetchall()
         conn.close()
         result = [{'productsCode' :row[0],'productsName' : row[1],'productsColor' : row[2],'productsSize' :row[3],'productsOPrice':row[4],'productsPrice':row[5]}for row in rows]
@@ -153,3 +157,21 @@ async def select_all_products(productsName : str):
     except Exception as e:
         print("Error:", e)
         return {"result": "Error"}
+
+# manufacturers 관련  : ----------------------
+# 등록 
+
+@router.post('/insert/manufacturers')
+async def insert_products(manufacturerName : str =Form(...)):
+    try:
+        conn = connect()
+        curs = conn.cursor()
+        sql = "INSERT INTO manufacturers(manufacturerName) VALUES (%s)"
+        curs.execute(sql,(manufacturerName,))
+        conn.commit()
+        conn.close()
+        return{"result" : "OK"}
+    except Exception as e:
+        print("Error : ",e)
+        return{"resule":"Error"}
+
