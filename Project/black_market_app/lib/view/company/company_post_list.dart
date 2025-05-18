@@ -1,7 +1,15 @@
-// 게시글 리스트 - CompanyPostList.dart (제품명, 작성자, 제목만 표시, 인덱스 포함)
+// 게시글 리스트 _ 2팀 팀원 : 김수아 개발 
+// 목적 :
+// 사용자가 그 물건에 대한 게시글을 확인 할 수 있다 
+// 차후 이 페이지 에선 추가 말고도 업데이트 + 삭제를 페이지로 갈 수 있도록 연결고리가 되어 줄 것이다. 
+// 개발일지 : 
+//2025_05_17 
+//파이썬 코드로 연동 ok 
+// 실시간 검색 db에서 안하고 그냥 있는 함수로 수정함 
+//모든 코드 ip global ip적용 완료 
+
 import 'dart:convert';
 import 'package:black_market_app/global.dart';
-import 'package:black_market_app/model/product_registration.dart';
 import 'package:black_market_app/view/company/create/company_create_product_post.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,8 +23,11 @@ class CompanyPostList extends StatefulWidget {
 }
 
 class _CompanyPostListState extends State<CompanyPostList> {
+  //검색 전 모든 정보가 들어갈 리스트
   List<Map<String, dynamic>> postList = [];
+  //겁색 완료된 리스트가 저장될 리스트 
   List<Map<String, dynamic>> filteredList = [];
+  //검색 받을 텍스트 피드 
   TextEditingController searchController = TextEditingController();
   bool _isLoading = true;
 
@@ -28,7 +39,7 @@ class _CompanyPostListState extends State<CompanyPostList> {
 
   Future<void> _loadPosts() async {
     try {
-      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/product/posts'));
+      final response = await http.get(Uri.parse('http://${globalip}:8000/kimsua/select/products/post/list'));
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
         final loadedPosts = jsonList.cast<Map<String, dynamic>>();
@@ -44,7 +55,7 @@ class _CompanyPostListState extends State<CompanyPostList> {
       setState(() => _isLoading = false);
     }
   }
-
+// 검색 기능 
   void _filterPosts(String query) {
     setState(() {
       filteredList = postList.where((post) =>
@@ -89,6 +100,7 @@ class _CompanyPostListState extends State<CompanyPostList> {
           ),
         ],
       ),
+
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -98,6 +110,7 @@ class _CompanyPostListState extends State<CompanyPostList> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // 위에 바 
                       Expanded(flex: 1, child: Text("번호", style: TextStyle(color: Colors.white))),
                       Expanded(flex: 3, child: Text("작성자", style: TextStyle(color: Colors.white))),
                       Expanded(flex: 4, child: Text("제품명", style: TextStyle(color: Colors.white))),
@@ -121,6 +134,7 @@ class _CompanyPostListState extends State<CompanyPostList> {
                         ),
                         child: Row(
                           children: [
+                            // 값이 들어가는 곳 
                             Expanded(flex: 1, child: Text('${index + 1}', style: const TextStyle(color: Colors.white))),
                             Expanded(flex: 3, child: Text(post['paUserid'], style: const TextStyle(color: Colors.white))),
                             Expanded(flex: 4, child: Text(post['productsName'], style: const TextStyle(color: Colors.white))),

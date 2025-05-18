@@ -3,7 +3,9 @@
 #sqllite로 개발한 소스 파이썬 서버 프로그래밍으로 바꾸기
 
 #2025_05_17 
-# 사진 리스트를 Json으로 보내기 sqllate엔 없던 구문 추가 
+# 사진 리스트를  바이트로 바꾸기 위해 import pickle 추가 
+# post ,product 부분 작성 
+
 
 #----import-----
 import pickle
@@ -28,8 +30,10 @@ def connect():
         db="mydb",
         charset="utf8"
     )
-@router.post("/insert/product")
-async def upload_post( ptitle: str =Form(...),introductionPhoto : UploadFile = Form(...),products_productsCode : int = Form(...),users_userid : str = Form(...),contentBlocks:List[UploadFile] = File(...)):
+# post 관련  : ----------------------
+# 등록 
+@router.post("/insert/product/post")
+async def insert_post( ptitle: str =Form(...),introductionPhoto : UploadFile = Form(...),products_productsCode : int = Form(...),users_userid : str = Form(...),contentBlocks:List[UploadFile] = File(...)):
     try:
         image_data = await introductionPhoto.read()
         content_data_list = []
@@ -47,8 +51,8 @@ async def upload_post( ptitle: str =Form(...),introductionPhoto : UploadFile = F
         print("Error : ",e)
         return{"resule":"Error"}
 
-
-@router.get("/kimsua/select/product/posts")
+#검색 [물건 게시글 리스트]
+@router.get("/kimsua/select/products/post/list")
 async def select_product_posts():
     try:
         conn = connect()
@@ -61,23 +65,16 @@ async def select_product_posts():
         curs.execute(sql)
         rows = curs.fetchall()
         conn.close()
-
-        result = []
-        for row in rows:
-            result.append({
-                "ptitle": row[0],          # 게시글 제목
-                "paUserid": row[1],        # 작성자 ID
-                "productsName": row[2]     # 제품명
-            })
-
+        result = [{'ptitle' :row[0],'paUserid' : row[1],'productsName' : row[2]}for row in rows]
+        
         return JSONResponse(content=result)
 
     except Exception as e:
         print("Error:", e)
         return JSONResponse(status_code=500, content={"result": "Error", "detail": str(e)})
 
-
-@router.get("/select/products")
+#게시글 작성할 물건 검색 
+@router.get("/select/products/post")
 async def get_products():
     try:
         conn = connect()
@@ -98,4 +95,61 @@ async def get_products():
         return rows
     except Exception as e:
         return {"result": "Error", "detail": str(e)}
+    
 
+# product 관련  : ----------------------
+# 등록 
+
+@router.post('/insert/products')
+async def insert_products(productsName : str =Form(...),productsColor : str = Form(...),productsSize : int = Form(...),productsOPrice : int = Form(...),productsPrice : str = Form(...),productsImage:UploadFile = File(...)):
+    try:
+        image_data = await productsImage.read()
+        conn = connect()
+        curs = conn.cursor()
+        sql = "INSERT INTO products(productsName,productsColor,productsSize,productsOPrice,productsPrice,productsImage) VALUES (%s,%s,%s,%s,%s,%s)"
+        curs.execute(sql,(productsName,productsColor,productsSize,productsOPrice,productsPrice,image_data))
+        conn.commit()
+        conn.close()
+        return{"result" : "OK"}
+    except Exception as e:
+        print("Error : ",e)
+        return{"resule":"Error"}
+    
+
+# 물건 조회
+@router.get("/select/products")
+async def select_all_products():
+    try:
+        conn = connect()
+        curs = conn.cursor()
+
+        sql = "SELECT productsCode, productsName, productsColor, productsSize, productsOPrice, productsPrice FROM products"
+        curs.execute(sql)
+        rows = curs.fetchall()
+        conn.close()
+        result = [{'productsCode' :row[0],'productsName' : row[1],'productsColor' : row[2],'productsSize' :row[3],'productsOPrice':row[4],'productsPrice':row[5]}for row in rows]
+
+        return {"result" :result }
+
+    except Exception as e:
+        print("Error:", e)
+        return {"result": "Error"}
+    
+# 해당 이름에 해당하는 물건 조회 
+@router.get("/select/products/{productsName}")
+async def select_all_products(productsName : str):
+    try:
+        conn = connect()
+        curs = conn.cursor()
+        sql = "SELECT productsCode, productsName, productsColor, productsSize, productsOPrice, productsPrice FROM products WHERE productsName LIKE = %s OR productsCode LIKE = %s"
+        like_pattern = f"%{productsName}%"
+        curs.execute(sql, (like_pattern,),(like_pattern,))
+        rows = curs.fetchall()
+        conn.close()
+        result = [{'productsCode' :row[0],'productsName' : row[1],'productsColor' : row[2],'productsSize' :row[3],'productsOPrice':row[4],'productsPrice':row[5]}for row in rows]
+
+        return {"result" :result }
+
+    except Exception as e:
+        print("Error:", e)
+        return {"result": "Error"}
