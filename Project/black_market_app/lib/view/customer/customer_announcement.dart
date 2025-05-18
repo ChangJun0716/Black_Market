@@ -1,8 +1,10 @@
 // 공지사항
+import 'dart:convert';
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/view/customer/customer_announcement_detail.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class CustomerAnnouncement extends StatefulWidget {
   const CustomerAnnouncement({super.key});
@@ -12,13 +14,23 @@ class CustomerAnnouncement extends StatefulWidget {
 }
 
 class _CustomerAnnouncementState extends State<CustomerAnnouncement> {
-  late DatabaseHandler handler;
-
+// ------------------------------- Property ------------------------------------- //
+  List data = [];
+// ------------------------------------------------------------------------------ //
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
+    getJSONData();
   }
+// ------------------------------------------------------------------------------ //
+// ------------------------------- Functions ------------------------------------ //
+getJSONData()async{
+  var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/notice"));
+  data.clear();
+  data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
+  setState(() {});
+}
+// ------------------------------------------------------------------------------ //
 
 
   @override
@@ -29,66 +41,34 @@ class _CustomerAnnouncementState extends State<CustomerAnnouncement> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder(
-        future: handler.queryAnnouncment(), 
-        builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-      return Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    // 에러가 발생한 경우
-    if (snapshot.hasError) {
-      return Center(
-        child: Text('에러 발생: ${snapshot.error}'),
-      );
-    }
-
-    // 데이터가 없는 경우
-    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-      return Center(
-        child: Text('공지사항이 없습니다.'),
-      );
-    }
-          if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: snapshot.data!.length,
+      body: ListView.builder(
+              itemCount: data.length,
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    Get.to(CustomerAnnouncementDetail(), arguments: snapshot.data![index].title);
+                    Get.to(CustomerAnnouncementDetail(), arguments: data[index]['title']);
                   },
                   child: Card(
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Image.memory(snapshot.data![index].photo,
-                          width: 100,
-                          height: 100,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('제목 : ${data[index]["title"]}'),
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('제목 : ${snapshot.data![index].title}'),
-                            Text('날짜 : ${snapshot.data![index].date}'),
-                          ],
-                        )
-                      ],
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                            child: Text('날짜 : ${data[index]["date"]}'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
               },
-            );
-          }else{
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-        },
-      ),
+            )
     );
   }
 }
