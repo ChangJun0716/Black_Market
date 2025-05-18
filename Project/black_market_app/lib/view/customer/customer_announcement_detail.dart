@@ -1,6 +1,8 @@
-import 'package:black_market_app/vm/database_handler.dart';
+import 'dart:convert';
+import 'package:black_market_app/global.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class CustomerAnnouncementDetail extends StatefulWidget {
   const CustomerAnnouncementDetail({super.key});
@@ -10,18 +12,36 @@ class CustomerAnnouncementDetail extends StatefulWidget {
       _CustomerAnnouncementDetailState();
 }
 
-class _CustomerAnnouncementDetailState
-    extends State<CustomerAnnouncementDetail> {
-  late DatabaseHandler handler;
+class _CustomerAnnouncementDetailState extends State<CustomerAnnouncementDetail> {
+// ------------------------------- Property ------------------------------------- //
   late String announcementTitle;
-
+  late String title;
+  List data = [];
+  String date = '';
+  String content = '';
+// ------------------------------------------------------------------------------ //
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
-    announcementTitle = Get.arguments ?? '__';
+    title = Get.arguments ?? '__';
+    // print(title); --- 1
+    getJSONData();
   }
+// ------------------------------------------------------------------------------ //
+// ------------------------------ Functions ------------------------------------- //
+// 선택한 card 로 부터 title 값을 받아와 database 에서 검색하여 image 를 제외한 data 를 불러와
+// 변수에 대입하는 함수! <- 리스트로 불러와 바로 화면에 대입할 경우 오류가 발생!
+getJSONData()async{
 
+  var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/notice/detail?title=$title"));
+  data.clear();
+  data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
+  // print(data[0]); --- 2
+  date = data[0]['date'];
+  content = data[0]['content'];
+  setState(() {});
+}
+// ------------------------------------------------------------------------------ //
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,24 +50,7 @@ class _CustomerAnnouncementDetailState
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder(
-        future: handler.queryAnnouncementByTitle(announcementTitle),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('오류 발생: ${snapshot.error}'));
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('공지사항을 불러오지 못했습니다.'));
-          }
-
-          final notice = snapshot.data!.first;
-
-          return SingleChildScrollView(
+      body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Card(
               elevation: 4,
@@ -57,39 +60,40 @@ class _CustomerAnnouncementDetailState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    if (notice.photo.isNotEmpty)
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            notice.photo,
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Image.network("http://$globalip:8000/changjun/select/notive/detail/image/$title?t=${DateTime.now().microsecondsSinceEpoch}",
+                        width: MediaQuery.of(context).size.width,
+                        height: 200,
                         ),
                       ),
-                    const SizedBox(height: 16),
-                    Text(
-                      notice.title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('게시 날짜: ${notice.date}'),
-                    const Divider(height: 24),
-                    Text(notice.content, style: const TextStyle(fontSize: 16)),
-                  ],
+                      _text('제목', title),
+                      _text('날짜', date),
+                      _text('제목', content),
+                    ],
                 ),
               ),
             ),
-          );
-        },
-      ),
+          )
     );
-  }
+  }// build
+// ------------------------- Widget ----------------------------------------- //
+// 선택한 공지사항의 제목, 내용, 날짜 등을 카드에 표시하기 위한 text widget
+Widget _text(String title, String content){
+  return Row(
+    children: [
+      Text(
+        '$title : ',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 15
+        ),
+      ),
+      Text(content)
+    ],
+  );
 }
+// -------------------------------------------------------------------------- //
+}// class

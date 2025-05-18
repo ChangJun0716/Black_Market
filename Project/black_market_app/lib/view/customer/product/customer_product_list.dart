@@ -1,12 +1,14 @@
-import 'package:black_market_app/model/grouped_products.dart';
+import 'dart:convert';
+import 'package:black_market_app/global.dart';
+import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/view/customer/customer_announcement.dart';
 import 'package:black_market_app/view/customer/product/customer_product_detail.dart';
 import 'package:black_market_app/view/customer/purchase/customer_purchase_list.dart';
 import 'package:black_market_app/view/customer/purchase/customer_shopping_cart_list.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
 
 class CustomerProductList extends StatefulWidget {
   const CustomerProductList({super.key});
@@ -16,23 +18,34 @@ class CustomerProductList extends StatefulWidget {
 }
 
 class _CustomerProductListState extends State<CustomerProductList> {
-  late DatabaseHandler handler;
+// ------------------------------- Property ------------------------------------- //
   final box = GetStorage();
   late String uid;
 
   final TextEditingController searchCon = TextEditingController();
-  String searchKeyword = '';
-
+// ------------------------------------------------------------------------------ //
+  String searchKeyword = ' ';
+  List data = [];
+// ------------------------------------------------------------------------------ //
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     uid = box.read('uid') ?? '';
+    getJSONData();
   }
-
-  Future<List<GroupedProduct>> fetchData() {
-    return handler.queryGroupedProducts(keyword: searchKeyword);
-  }
+// ------------------------------- Functions ------------------------------------ //
+// 1. 시작은 전체 리스트가 나오고 이후 검색어를 입력 한 뒤 검색 버튼을 누르게 되면 검색어가 포함된 data 들을 불러오는 함수
+// 아무것도 입력하지 않고 검색 버튼을 눌러도 전체 data 가 나타난다.
+getJSONData()async{
+  searchKeyword = searchCon.text.trim().isEmpty
+  ? ' '
+  : searchCon.text;
+var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/allProductsRegistration/$searchKeyword"));
+  data.clear();
+  data.addAll(json.decode(utf8.decode(response.bodyBytes))['results']);
+  setState(() {});
+}
+// ------------------------------------------------------------------------------ //
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +85,7 @@ class _CustomerProductListState extends State<CustomerProductList> {
       ),
       body: Column(
         children: [
-          // 🔍 검색창
+          // 검색창
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Row(
@@ -87,111 +100,88 @@ class _CustomerProductListState extends State<CustomerProductList> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
+                CustomButton(
+                  text: '검색', 
                   onPressed: () {
-                    setState(() {
-                      searchKeyword = searchCon.text.trim();
-                    });
+                    searchKeyword = searchCon.text.trim();
+                    getJSONData();
+                    setState(() {});
                   },
-                  child: const Text('검색'),
                 ),
               ],
             ),
           ),
-          // 📦 상품 그리드
+          //  상품 리스트
           Expanded(
-            child: FutureBuilder(
-              future: fetchData(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text('오류 발생: ${snapshot.error}'));
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('등록된 상품이 없습니다.'));
-                }
-
-                final products = snapshot.data!;
-
-                return GridView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: products.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.8,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = products[index];
-                    return GestureDetector(
-                      onTap: () {
-                        Get.to(
-                          const CustomerProductDetail(),
-                          arguments: item.ptitle,
-                        );
-                      },
-                      child: Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(12),
-                                ),
-                                child: Image.memory(
-                                  item.introductionPhoto,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                                horizontal: 8,
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    item.ptitle,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  Text(
-                                    '${item.productsPrice}원',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    '색상: ${item.productsColor}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+            child: GridView.builder(
+              padding: const EdgeInsets.all(10),
+              itemCount: data.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.8,
+            ),
+              itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                Get.to(
+                  const CustomerProductDetail(),
+                  arguments: data[index]['productsName'],
+                );
+              },
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
                       ),
-                    );
-                  },
+                      child: Image.network("http://$globalip:8000/changjun/select/allProductsRegistration/image/${data[index]['productsCode']}?t=${DateTime.now().microsecondsSinceEpoch}")
+                    ),  
+                  ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4.0,
+                            horizontal: 8,
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                data[index]['ptitle'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              Text(
+                                '${data[index]['productsPrice']}원',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '색상: ${data[index]['productsColor']}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
-          ),
+          )
         ],
       ),
     );
-  }
-}
+  }// build
+}// class
