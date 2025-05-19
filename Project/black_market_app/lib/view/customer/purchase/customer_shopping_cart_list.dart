@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:black_market_app/global.dart';
 import 'package:black_market_app/message/custom_dialogue.dart';
+import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
@@ -18,6 +19,7 @@ class CustomerShoppingCartList extends StatefulWidget {
 
 class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
 // ------------------------------- Property ------------------------------------ //
+  late DatabaseHandler handler;
   final box = GetStorage();
   late String uid;
   bool isReady = false;
@@ -26,6 +28,7 @@ class _CustomerShoppingCartListState extends State<CustomerShoppingCartList> {
   @override
   void initState() {
     super.initState();
+    handler = DatabaseHandler();
     initStorage();
     getJSONData();
   }
@@ -45,6 +48,13 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/s
     setState(() {});
   }
 // ------------------------------------------------------------------------------ //
+
+  Future<void> deleteCartItem(int purchaseId) async {
+    await handler.deletePurchaseItem(purchaseId); // DB에서 삭제
+    setState(() {});
+  }
+
+  // ------------------------- //
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,7 +64,7 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/s
         foregroundColor: Colors.white,
       ),
       body: data.isEmpty
-      ? Center(child: Text('장바구니가 비어있습니다.', textAlign: TextAlign.center))
+      ? Text('데이터가 없습니다.', textAlign: TextAlign.center)
       : ListView.builder( 
               itemCount: data.length,
               itemBuilder: (context, index) {

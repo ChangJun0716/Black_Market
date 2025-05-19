@@ -112,7 +112,7 @@ class _LoginState extends State<Login> {
       } else {
         // 대리점 페이지 (대리 점주)
         saveStorage(memberType);
-        Get.to(StoreHome());
+        Get.to(StoreHomePage());
       }
       idCon.text = '';
       pwCon.text = '';

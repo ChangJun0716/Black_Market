@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:black_market_app/global.dart';
 import 'package:black_market_app/message/custom_dialogue.dart';
 import 'package:black_market_app/model/store.dart';
+import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -29,6 +30,7 @@ class _UserMapState extends State<CustomerSelectStore> {
   final box = GetStorage();
   late String uid;
   List<Store> storeList = [];
+  late DatabaseHandler handler;
   List data = [];
 
   // Segment Widget
