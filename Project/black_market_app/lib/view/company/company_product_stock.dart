@@ -1,9 +1,17 @@
-// 입고 페이지
-import 'package:black_market_app/vm/database_handler.dart';
+// 입고 페이지 - 2팀 팀원 : 김수아 개발 
+// 목적 : 
+// 제품을 발주를 하고 제조사라 부터 제품을 받고 수량을 전산상에 등록하기 위해 쓰는 페이지이다. 
+// 개발 일지  :
+//sqlite로 개발 했던 소스를 mysql로 바꾸기 
+// global 변수로 ip 설정 완료 
+
+import 'dart:convert';
+
+import 'package:black_market_app/global.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import '../../model/stock_receipts.dart';
+import 'package:http/http.dart' as http;
 
 class CompanyProductStock extends StatefulWidget {
   const CompanyProductStock({super.key});
@@ -13,125 +21,99 @@ class CompanyProductStock extends StatefulWidget {
 }
 
 class _CompanyProductStockState extends State<CompanyProductStock> {
-  late DatabaseHandler handler;
+  //get arguments 벋울꺼
   late Map<String, dynamic> selectedItem;
+  //입고 수량 입력창
   final TextEditingController quantityController = TextEditingController();
-
   final box = GetStorage();
+  //아이디
   late String userId;
-
+  //제조사 리스트
   List<String> manufacturerList = [];
+  //제조사 선택된거
   String? selectedManufacturer;
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     selectedItem = Map<String, dynamic>.from(Get.arguments);
     userId = box.read('uid') ?? '';
     loadManufacturers();
   }
-
-  Future<void> loadManufacturers() async {
-    try {
-      final list = await handler.getManufacturers();
+  //제조사 검색
+ loadManufacturers() async {
+  try {
+    final response = await http.get(Uri.parse('http://$globalip:8000/kimsua/select/manufacturers'));
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      manufacturerList = List<String>.from(decoded['result']);
       setState(() {
-        manufacturerList = list;
-        selectedManufacturer = selectedItem['manufacturerName'];
-        if (!manufacturerList.contains(selectedManufacturer)) {
-          selectedManufacturer = manufacturerList.isNotEmpty ? manufacturerList.first : null;
-        }
       });
-    } catch (e) {
-      debugPrint("제조사 로딩 오류: $e");
     }
+  } catch (e) {
+    print("Error: $e");
   }
-
-  void submitStockReceipts() async {
-    try {
-      debugPrint('[입고 시작]');
-
-      final code = selectedItem['productsCode'];
-      final currentStock = selectedItem['currentStock'];
-      final input = quantityController.text;
-      final qty = int.tryParse(input);
-      final receiptDate = DateTime.now();
-
-      if (qty == null || qty <= 0 || selectedManufacturer == null) {
-        debugPrint('[입력 오류] 수량: $qty, 제조사: $selectedManufacturer');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('수량 또는 제조사를 올바르게 입력해주세요.')),
+}
+//입력
+  _submit() async {
+  if (selectedManufacturer == null || quantityController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("제조사와 수량을 입력해주세요.")),
+    );
+    return;
+  }
+  try {
+ 
+      var request = http.MultipartRequest(
+          "POST",
+          Uri.parse("http://$globalip:8000/kimsua/insert/products/stockReceipts"),
         );
-        return;
-      }
-
-      debugPrint('[입력 확인 완료]');
-
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('입고 확인'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('제품코드: $code'),
-              Text('입고 수량: $qty'),
-              Text('입고 날짜: ${receiptDate.toIso8601String().split("T")[0]}'),
-              Text('제조사: $selectedManufacturer'),
-              Text('처리자 ID: $userId'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('확인'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) {
-        debugPrint('[사용자 취소]');
-        return;
-      }
-
-      final receipt = StockReceipts(
-      saUserid: userId,
-      stockReceiptsQuantityReceived: qty,
-      stockReceiptsReceipDate: receiptDate,
-      sproductCode: code.toString(), // 여기 수정
-      smanufacturerName: selectedManufacturer!,
-      );
-
-
-      debugPrint('[입고 모델 생성 완료]');
-      await handler.insertStockReceipt(receipt);
-      debugPrint('[입고 DB 저장 완료]');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('입고 처리가 완료되었습니다.')),
-      );
-      Get.back();
-    } catch (e, stack) {
-      debugPrint('[에러 발생]');
-      debugPrint(e.toString());
-      debugPrint(stack.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('입고 중 오류 발생: $e')),
-      );
-    }
+        request.fields['stockReceiptsQuantityReceived'] = quantityController.text.trim();
+        request.fields['stockReceiptsReceipDate'] = DateTime.now().toString();
+        request.fields['manufacturers_manufacturerName'] = selectedManufacturer!.toString();
+        request.fields['users_userid'] = userId;
+        request.fields['products_productsCode'] =selectedItem['productsCode'].toString();
+        var res = await request.send();
+        if (res.statusCode == 200) {
+          _showDialog();
+        } else {
+          errorSnackBar();
+        }
+        
+  } catch (e) {
+    print(e);
+    errorSnackBar();
   }
+}
 
-  @override
-  void dispose() {
-    quantityController.dispose();
-    super.dispose();
-  }
+_showDialog(){
+  Get.defaultDialog(
+    title: "입력 결과",
+    middleText: "입력이 완료 되었습니다.",
+    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+    barrierDismissible: false,
+    actions: [
+      TextButton(
+        onPressed: () {
+          Get.back();
+          Get.back();
+        }, 
+        child: Text('OK')
+      ),
+    ]
+  );
+}
+
+errorSnackBar(){
+  Get.snackbar(
+    'Error', 
+    '입력시 문제가 발생 했습니다.',
+    duration: Duration(seconds: 2)
+  );
+}
+ 
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -158,29 +140,31 @@ class _CompanyProductStockState extends State<CompanyProductStock> {
                   style: const TextStyle(color: Colors.white),
                 ),
                 subtitle: Text(
-                  '컬러: ${selectedItem['productsColor']} / 사이즈: ${selectedItem['productsSize']} / 재고: ${selectedItem['currentStock']}',
+                  '컬러: ${selectedItem['productsColor']} / 사이즈: ${selectedItem['productsSize']} ',
                   style: const TextStyle(color: Colors.white70),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: manufacturerList.contains(selectedManufacturer) ? selectedManufacturer : null,
-              items: manufacturerList.map((name) => DropdownMenuItem(
-                value: name,
-                child: Text(name),
-              )).toList(),
-              onChanged: (value) => setState(() => selectedManufacturer = value),
-              decoration: const InputDecoration(
-                labelText: '제조사 선택',
-                filled: true,
-                fillColor: Colors.white10,
-                border: OutlineInputBorder(),
+              style: TextStyle(
+                color: Colors.pink
               ),
-              dropdownColor: Colors.black,
-              style: const TextStyle(color: Colors.white),
+              value: selectedManufacturer,
+              hint: const Text('제조사 선택'),
+              items: manufacturerList.map((String item) {
+                return DropdownMenuItem<String>(
+                  value: item,
+                  child: Text(item),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedManufacturer = newValue;
+                });
+              },
+              validator: (value) => value == null ? '제조사를 선택해주세요' : null,
             ),
-            const SizedBox(height: 16),
             TextField(
               controller: quantityController,
               keyboardType: TextInputType.number,
@@ -197,7 +181,7 @@ class _CompanyProductStockState extends State<CompanyProductStock> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: submitStockReceipts,
+                onPressed: _submit,
                 child: const Text('입고하기'),
               ),
             ),

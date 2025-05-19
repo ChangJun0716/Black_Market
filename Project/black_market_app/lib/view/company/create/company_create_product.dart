@@ -3,7 +3,7 @@
 //판매할 상품을 등록한다  
 //개발 일지 :
 //2025_05_17 
-//delate로 개발 했던 소스 mysql python 소스로 바꾸기 
+//sqlite로 개발 했던 소스 mysql python 소스로 바꾸기 
 import 'dart:io';
 import 'package:black_market_app/global.dart';
 import 'package:black_market_app/utility/custom_button.dart';
@@ -20,7 +20,8 @@ class CompanyCreateProduct extends StatefulWidget {
 }
 
 class _CompanyCreateProductState extends State<CompanyCreateProduct> {
-  final _formKey = GlobalKey<FormState>();
+  //제품 입력 받을 값 소환
+  final _formKey = GlobalKey<FormState>();// <- 이거 걍 밑에 컨트롤러들 다 값이 있냐에 쓸꺼임 
   final _colorController = TextEditingController();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
@@ -28,7 +29,7 @@ class _CompanyCreateProductState extends State<CompanyCreateProduct> {
   final _opriceController = TextEditingController();
   XFile? imageFile;
   final ImagePicker picker = ImagePicker();
-
+  //이미지 선택
   getImageFromGallery(ImageSource imageSource)async{
   final XFile? pickedFile = await picker.pickImage(source: imageSource);
   imageFile = XFile(pickedFile!.path); 

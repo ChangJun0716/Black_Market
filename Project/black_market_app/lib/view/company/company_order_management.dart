@@ -1,10 +1,22 @@
-//재고 발주 페이지 
+// 30% 미만 재고 확인 -  2팀 팀원 김수아 개발 
+// 목적  : 
+// 관리자가 30% 미만으로 떨어진 재고는 다시 채우기 위해 확인 하는 페이지이다.
+// 본 페이지에서 적은 수량의 제품을 확인하고 체크 후 발주를 신청하는 페이지로 갈 수 있으며
+// 발주 기록을 확인 할 수 있는 페이지도 연결 되어 있다.
+// 개발 일지 :
+// 2025_05_19
+// sqllite을 이용했던 소스를 mysql로 python을 이용하여 다시 개발해 보았다.
+// 계속 수량 오류 때문에 시간이 좀 걸렸지만 타입 문제를 찾아 해결 하였다.
+// global ip 설정 완!
+
+import 'dart:convert';
+import 'package:black_market_app/global.dart';
 import 'package:black_market_app/view/company/order/company_order.dart';
 import 'package:black_market_app/view/company/order/company_order_list.dart';
 import 'package:black_market_app/view/company/order/company_order_orderlist.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:black_market_app/vm/database_handler.dart';
+import 'package:http/http.dart' as http;
 
 class CompanyOrderManagement extends StatefulWidget {
   const CompanyOrderManagement({super.key});
@@ -14,37 +26,58 @@ class CompanyOrderManagement extends StatefulWidget {
 }
 
 class _CompanyOrderManagementState extends State<CompanyOrderManagement> {
-  late DatabaseHandler handler;
   List<Map<String, dynamic>> lowStockList = []; // 30개 미만 필터링된 재고
   final Map<String, bool> checkStates = {}; // 체크박스 상태
+  //재고 카운팅 변수 
+  int currentStock = 0;
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     loadLowStockInventory();
   }
-
-  Future<void> loadLowStockInventory() async {
+  // 일단 제품 다 받아옴  이렇게도 할 수 있고 서버에서 30% 미반의 재고를 샐랙해서 줬을 수도 있음 
+  loadLowStockInventory() async {
     final List<Map<String, dynamic>> result = [];
-    final rawList = await handler.getAllProducts1();
+    List<Map<String, dynamic>> data = [];
 
-    for (final product in rawList) {
-      final productCode = product.productsCode;
-      final manufacturer = await handler.getManufacturerByProduct('$productCode!');
-      final stockIn = await handler.getTotalStockIn('$productCode');
-      final stockOut = await handler.getTotalStockOut('$productCode');
-      final currentStock = stockIn - stockOut;
+     try {
+        final response = await http.get(Uri.parse('http://$globalip:8000/kimsua/select/products'));
+        if (response.statusCode == 200) {
+          final decoded = json.decode(utf8.decode(response.bodyBytes));
+          setState(() {
+            data = List<Map<String, dynamic>>.from(decoded['result']);
+          });
+      }
+      }catch(e){
+        print(e);
+      }
 
-      if (currentStock < 30) {
+    for (int index=0 ;index<data.length;index++) {
+         try {
+        final response = await http.post(
+          Uri.parse("http://$globalip:8000/kimsua/select/currentStock"),
+          body: {'productsCode': data[index]['productsCode'].toString()},
+        );
+
+        if (response.statusCode == 200) {
+          final decoded = json.decode(utf8.decode(response.bodyBytes));
+          currentStock = decoded['result']; 
+        } 
+      } catch (e) {
+        print(e);
+      }
+      //30% 미만의 제품이 많으면 좀 무거울 수 있음 ㅇㅇ
+      if (currentStock< 30) {
         result.add({
-          'productsCode': productCode,
-          'productsName': product.productsName,
-          'productsColor': product.productsColor,
-          'productsSize': product.productsSize,
-          'manufacturerName': manufacturer,
-          'currentStock': currentStock,
+          'productsCode': data[index]['productsCode'].toString(),
+          'productsName': data[index]['productsName'].toString(),
+          'productsColor': data[index]['productsColor'].toString(),
+          'productsSize':data[index]['productsSize'].toString(),
+          'currentStock': currentStock.toString(),
+        
         });
+        
       }
     }
 

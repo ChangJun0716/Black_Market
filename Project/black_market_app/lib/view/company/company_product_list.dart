@@ -3,7 +3,7 @@
 //등록된 제품들을 볼 수 있다 
 //개발일지
 //2025_05_18
-//디비 라이트로 구현 헀던 핸드러를 빼고 mysql 파이썬 서버로 바꾸기 
+//sqlite로 구현 헀던 핸드러를 빼고 mysql 파이썬 서버로 바꾸기 
 //파이썬으로 받으면서 sql문을 try로 감쌌다 아님 화면 들어가다가 튕김 
 
 import 'dart:convert';
@@ -24,8 +24,8 @@ class CompanyProductList extends StatefulWidget {
 
 class _CompanyProductListState extends State<CompanyProductList> {
    bool _isLoading = true;
-  //검색한 결과를 받아 오는 리스트
-  List data = [];
+  //제품 검색한 결과를 받아 오는 리스트
+  List data= [];
   List<Products> filteredList = [];
   //검색창에 용으로 쓰임 
   TextEditingController searchController = TextEditingController();
@@ -37,7 +37,6 @@ class _CompanyProductListState extends State<CompanyProductList> {
   }
   //전부 보이는 데이타 
   getJSONData()async{
-    print("실행됨");
     try {
       var response = await http.get(Uri.parse("http://$globalip:8000/kimsua/select/products"));
       data.clear();
@@ -50,7 +49,7 @@ class _CompanyProductListState extends State<CompanyProductList> {
     }
         
   }
-  
+  //검색 
   getJSONData1()async{
     final keyword = searchController.text.trim();
       if (keyword.isEmpty) {
@@ -68,7 +67,6 @@ class _CompanyProductListState extends State<CompanyProductList> {
             }
             setState(() {});
           } else {
-            // 에러 처리
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("검색 실패")),
             );
