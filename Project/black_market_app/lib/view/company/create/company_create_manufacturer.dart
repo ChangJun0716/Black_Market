@@ -4,10 +4,10 @@
 //차후 더 이상 팔지 않는 제조사의 이름은 지울 수 도 있게 하려고 한다 
 //개발 일지 : 
 //2025_05_18
-// 원래 있던 디비 라이트의 내용을 mysql로 바꿨다.
+// 원래 있던 sqlite의 내용을 mysql로 바꿨다.
+//global ip 적용 완료!
 
 import 'package:black_market_app/global.dart';
-import 'package:black_market_app/model/manufacturers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -38,7 +38,6 @@ class _CompanyCreateManufacturerState extends State<CompanyCreateManufacturer> {
           Uri.parse("http://$globalip:8000/kimsua/insert/manufacturers"),
         );
         request.fields['manufacturerName'] = _nameController.text.trim();
-         var response =await request.send();
         
          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('제조사가 등록되었습니다.')),

@@ -1,3 +1,9 @@
+/**
+ * 관리자 메인 페이지 - 2팀 팀원 김수아 개발 
+ * 목적 : 
+ * 관리자가 작업 할 수 있는 페이지를 한눈에 볼 수 있는 메뉴를 만들고 싶었다. 
+ * */
+
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/view/company/company_check_inventory.dart';
 import 'package:black_market_app/view/company/company_order_management.dart';
