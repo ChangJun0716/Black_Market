@@ -1,9 +1,7 @@
 // 구매 내역
 import 'dart:convert';
-
 import 'package:black_market_app/global.dart';
 import 'package:black_market_app/view/customer/purchase/customer_purchase_detail.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -18,7 +16,6 @@ class CustomerPurchaseList extends StatefulWidget {
 
 class _CustomerPurchaseListState extends State<CustomerPurchaseList> {
 // ------------------------------- Property  ------------------------------------ //
-  late DatabaseHandler handler;
   final box = GetStorage();
   List data = []; // 사용자의 결제 리스트 data 를 불러와 담을 변수
   late String uid;
@@ -27,7 +24,6 @@ class _CustomerPurchaseListState extends State<CustomerPurchaseList> {
 // ------------------------------------------------------------------------------ //
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     initStorage();
     getJSONData();
   }
@@ -52,12 +48,12 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/P
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('결재 내역'),
+        title: Text('결제 내역'),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
       body: data.isEmpty
-      ? Text('데이터가 없습니다', textAlign: TextAlign.center)
+      ? Text('결제 내역이 없습니다', textAlign: TextAlign.center)
       : ListView.builder(
         itemCount: data.length,
         itemBuilder: (context, index) {
@@ -83,7 +79,7 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/P
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("결제날짜   : ${data[index]['PurchaseDate']}"),
+                      Text("결제날짜   : ${(data[index]['PurchaseDate'].toString().substring(0,10))}"),
                       Text("배송상태  : ${data[index]['PurchaseDeliveryStatus']}"),
                     ],
                   ),

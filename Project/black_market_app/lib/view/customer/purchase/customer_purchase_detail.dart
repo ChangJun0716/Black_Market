@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:black_market_app/global.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -14,14 +13,12 @@ class CustomerPurchaseDetail extends StatefulWidget {
 
 class _CustomerPurchaseDetailState extends State<CustomerPurchaseDetail> {
 // --------------------------------- Property ----------------------------------- //
-  late DatabaseHandler handler;
   late int purchaseId;
   List data =[]; // 사용자가 결제한 상품의 상세보기 data를 담을 list
 // ------------------------------------------------------------------------------ //
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
     purchaseId = Get.arguments ?? -1;
     getJSONData();
   }
@@ -60,20 +57,28 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/s
                     height: 200,
                   ),
                 ),
-                Text(
-                  data[0]['productsName'],
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    data[0]['productsName'],
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
                 Text('색상: ${data[0]['productsColor']}'),
-                Text('사이즈: ${data[0]['productsSize']}'),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('사이즈: ${data[0]['productsSize']}'),
+                ),
                 Text('수량: ${data[0]['purchaseQuanity']}개'),
-                Text(
-                  '총 결제금액: ${data[0]['purchasePrice']}원',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    '총 결제금액: ${data[0]['purchasePrice']}원',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const Divider(height: 24),
                 Text(

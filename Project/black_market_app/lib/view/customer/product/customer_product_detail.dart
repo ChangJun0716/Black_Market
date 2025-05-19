@@ -2,11 +2,9 @@
 import 'dart:convert';
 import 'package:black_market_app/global.dart';
 import 'package:black_market_app/message/custom_snackbar.dart';
-import 'package:black_market_app/model/purchase.dart';
 import 'package:black_market_app/utility/custom_button.dart';
 import 'package:black_market_app/utility/custom_textfield.dart';
 import 'package:black_market_app/view/customer/customer_select_store.dart';
-import 'package:black_market_app/vm/database_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -157,18 +155,14 @@ fetchContentImageUrls(int productsCode) async {
 SizedBox(
   height: 300,
   child: ListView.builder(
-    shrinkWrap: true,
-    physics: NeverScrollableScrollPhysics(),
     itemCount: contentImageUrls.length,
     itemBuilder: (context, index) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Image.network(
-          contentImageUrls[index],
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Icon(Icons.broken_image),
-        ),
+      return Image.network(
+        'http://$globalip:8000/changjun/select/selectedProducts/contentBlock/$productsCode/$index',
+        width: 200,
+        height: 200,
+        errorBuilder: (context, error, stackTrace) =>
+            Icon(Icons.broken_image),
       );
     },
   ),
