@@ -127,7 +127,10 @@ var response = await http.get(Uri.parse("http://$globalip:8000/changjun/select/a
                 onTap: () {
                 Get.to(
                   const CustomerProductDetail(),
-                  arguments: data[index]['productsName'],
+                  arguments: {
+                    'productsName' : data[index]['productsName'],
+                    'productsCode' : data[index]['productsCode']
+                  },
                 );
               },
               child: Card(
